@@ -71,12 +71,12 @@ async fn main() {
 
             circle.x = circle
                 .x
-                .min(screen_width() - BALL_RADIUS / 2.0)
-                .max(0.0 + BALL_RADIUS / 2.0);
+                .min(screen_width() - BALL_RADIUS)
+                .max(0.0 + BALL_RADIUS);
             circle.y = circle
                 .y
-                .min(screen_height() - BALL_RADIUS / 2.0)
-                .max(0.0 + BALL_RADIUS / 2.0);
+                .min(screen_height() - BALL_RADIUS)
+                .max(0.0 + BALL_RADIUS);
 
             if rand::gen_range(0, 99) >= 95 {
                 let size = rand::gen_range(16.0, 64.0);
