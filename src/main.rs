@@ -3,6 +3,7 @@ use macroquad::rand::ChooseRandom;
 
 const MOVEMENT_SPEED: f32 = 200.0;
 const BALL_RADIUS: f32 = 32.0;
+const MAX_BULLETS_PER_SECOND: f64 = 4.0;
 
 struct Shape {
     size: f32,
@@ -39,6 +40,7 @@ async fn main() {
     rand::srand(miniquad::date::now() as u64);
     let colors: Vec<Color> = vec![BLACK, RED, BLUE, GREEN, PINK, SKYBLUE, DARKBLUE];
 
+    let mut last_bullet_time = get_time();
     let mut squares = vec![];
     let mut bullets: Vec<Shape> = vec![];
     let mut circle = Shape {
@@ -88,7 +90,10 @@ async fn main() {
                 .min(screen_height() - BALL_RADIUS)
                 .max(0.0 + BALL_RADIUS);
 
-            if is_key_pressed(KeyCode::Space) {
+            if is_key_pressed(KeyCode::Space)
+                && get_time() - last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND
+            {
+                last_bullet_time = get_time();
                 bullets.push(Shape {
                     x: circle.x,
                     y: circle.y,
