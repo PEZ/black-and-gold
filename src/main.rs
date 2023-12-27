@@ -114,9 +114,10 @@ async fn main() {
 
         if game_over {
             let game_over_text = "GAME OVER! Press space to restart.";
-            let text_width = measure_text(game_over_text, None, 32, 1.0).width;
-            let text_x = (screen_width() - text_width) / 2.0;
-            let text_y = screen_height() / 2.0;
+            let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
+
+            let text_x = (screen_width() - text_dimensions.width) / 2.0;
+            let text_y = screen_height() / 2.0 - text_dimensions.offset_y + text_dimensions.height;
 
             draw_text(game_over_text, text_x, text_y, 32.0, WHITE);
         }
