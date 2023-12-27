@@ -10,6 +10,7 @@ struct Shape {
     x: f32,
     y: f32,
     color: Color,
+    collided: bool,
 }
 
 impl Shape {
@@ -19,6 +20,18 @@ impl Shape {
         let dy = (self.y - circle.y).abs().max(half) - half;
         dx * dx + dy * dy <= circle.size * circle.size / 4.0
     }
+    fn collides_with(&self, other: &Self) -> bool {
+        self.rect().overlaps(&other.rect())
+    }
+
+    fn rect(&self) -> Rect {
+        Rect {
+            x: self.x - self.size / 2.0,
+            y: self.y - self.size / 2.0,
+            w: self.size,
+            h: self.size,
+        }
+    }
 }
 
 #[macroquad::main("Mitt spel")]
@@ -27,12 +40,14 @@ async fn main() {
     let colors: Vec<Color> = vec![BLACK, RED, BLUE, GREEN, PINK, SKYBLUE, DARKBLUE];
 
     let mut squares = vec![];
+    let mut bullets: Vec<Shape> = vec![];
     let mut circle = Shape {
         size: BALL_RADIUS * 2.0,
         speed: MOVEMENT_SPEED,
         x: screen_width() / 2.0,
         y: screen_height() / 2.0,
         color: DARKPURPLE,
+        collided: false,
     };
 
     let mut game_over = false;
@@ -44,6 +59,7 @@ async fn main() {
 
         if game_over && is_key_pressed(KeyCode::Space) {
             squares.clear();
+            bullets.clear();
             circle.x = screen_width() / 2.0;
             circle.y = screen_height() / 2.0;
             game_over = false;
@@ -72,6 +88,17 @@ async fn main() {
                 .min(screen_height() - BALL_RADIUS)
                 .max(0.0 + BALL_RADIUS);
 
+            if is_key_pressed(KeyCode::Space) {
+                bullets.push(Shape {
+                    x: circle.x,
+                    y: circle.y,
+                    speed: circle.speed * 2.0,
+                    color: MAROON,
+                    size: 5.0,
+                    collided: false,
+                });
+            }
+
             if rand::gen_range(0, 99) >= 95 {
                 let size = rand::gen_range(16.0, 64.0);
                 squares.push(Shape {
@@ -80,11 +107,15 @@ async fn main() {
                     x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                     y: -size,
                     color: *colors.choose().unwrap(),
+                    collided: false,
                 });
             }
 
             for square in &mut squares {
                 square.y += square.speed * delta_time;
+            }
+            for bullet in &mut bullets {
+                bullet.y -= bullet.speed * delta_time;
             }
 
             if squares
@@ -94,7 +125,19 @@ async fn main() {
                 game_over = true;
             }
 
+            for square in squares.iter_mut() {
+                for bullet in bullets.iter_mut() {
+                    if bullet.collides_with(square) {
+                        bullet.collided = true;
+                        square.collided = true;
+                    }
+                }
+            }
+
             squares.retain(|square| square.y < screen_width() + square.size);
+            bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
+            squares.retain(|square| !square.collided);
+            bullets.retain(|bullet| !bullet.collided);
         }
 
         for square in &squares {
@@ -107,6 +150,15 @@ async fn main() {
             );
         }
 
+        for bullet in &bullets {
+            draw_rectangle(
+                bullet.x - bullet.size / 2.0,
+                bullet.y - bullet.size / 2.0,
+                bullet.size,
+                bullet.size,
+                bullet.color,
+            );
+        }
         draw_circle(circle.x, circle.y, circle.size / 2.0, circle.color);
 
         if game_over {
