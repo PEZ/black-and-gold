@@ -12,7 +12,7 @@ use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
-use macroquad::audio::{load_sound, play_sound, play_sound_once, PlaySoundParams};
+use macroquad::audio::{load_sound, play_sound, play_sound_once, PlaySoundParams, set_sound_volume, stop_sound};
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
@@ -420,6 +420,7 @@ async fn main() {
 
         match game_state {
             GameState::MainMenu => {
+                set_sound_volume(&theme_music, 0.2);
                 if is_key_pressed(KeyCode::Escape) {
                     std::process::exit(0);
                 }
@@ -431,8 +432,7 @@ async fn main() {
                     circle.y = screen_height() / 2.0;
                     score = 0;
                     high_score_beaten = false;
-                    game_state = GameState::Playing;
-                }
+                    game_state = GameState::Playing;                }
                 let text = "Press space to start.";
                 let text_dimensions = measure_text(text, None, 32, 1.0);
 
@@ -444,6 +444,7 @@ async fn main() {
                 draw_game_title();
             }
             GameState::Playing => {
+                set_sound_volume(&theme_music, 1.0);
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
@@ -586,7 +587,15 @@ async fn main() {
                 );
             }
             GameState::Paused => {
+                stop_sound(&theme_music);
                 if is_key_pressed(KeyCode::Space) {
+                    play_sound(
+                        &theme_music,
+                        PlaySoundParams {
+                            looped: true,
+                            volume: 1.,
+                        },
+                    );                
                     game_state = GameState::Playing;
                 }
                 draw_game_objects(
@@ -616,6 +625,7 @@ async fn main() {
                 draw_game_title();
             }
             GameState::GameOver => {
+                set_sound_volume(&theme_music, 0.2);
                 if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::MainMenu;
                 }
