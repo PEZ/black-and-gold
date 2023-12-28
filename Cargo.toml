@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-macroquad = { git = "https://github.com/not-fl3/macroquad.git" }
+macroquad = { git = "https://github.com/not-fl3/macroquad.git", features = ["audio"] }
 lazy_static = "1.4"
 notify = "6.1.1"
 macroquad-particles = { git = "https://github.com/not-fl3/macroquad.git" }

@@ -12,6 +12,7 @@ use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
+use macroquad::audio::{load_sound, play_sound, play_sound_once, PlaySoundParams};
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
@@ -283,6 +284,18 @@ async fn main() {
 
     // build_textures_atlas();
 
+    let theme_music = load_sound("8bit-spaceshooter.ogg").await.unwrap();
+    let sound_explosion = load_sound("explosion.wav").await.unwrap();
+    let sound_laser = load_sound("laser.wav").await.unwrap();
+
+    play_sound(
+        &theme_music,
+        PlaySoundParams {
+            looped: true,
+            volume: 1.,
+        },
+    );
+
     let mut ship_sprite = AnimatedSprite::new(
         16,
         24,
@@ -491,6 +504,7 @@ async fn main() {
                         size: 32.0,
                         collided: false,
                     });
+                    play_sound_once(&sound_laser);
                 }
 
                 if rand::gen_range(0, 99) >= 95 {
@@ -544,6 +558,7 @@ async fn main() {
                                 }),
                                 vec2(bullet.x, bullet.y),
                             ));
+                            play_sound_once(&sound_explosion);
                         }
                     }
                 }
