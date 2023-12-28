@@ -1,13 +1,14 @@
 #[macro_use]
 extern crate lazy_static;
 
-use notify::{RecommendedWatcher, RecursiveMode, Watcher, Config};
+use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::Path;
 use std::sync::mpsc::channel;
 use std::time::Duration;
-use std::path::Path;
 
-use macroquad::rand::ChooseRandom;
 use macroquad::prelude::*;
+use macroquad::rand::ChooseRandom;
+use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
 use std::f32::consts::PI;
 use std::fs;
 
@@ -37,8 +38,8 @@ void main() {
 
 lazy_static! {
     static ref ENEMY_COLORS: Vec<Color> = vec![
-        BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY,
-        GREEN, LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
+        BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY, GREEN,
+        LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
     ];
 }
 
@@ -97,10 +98,33 @@ fn draw_game_title() {
     );
 }
 
+fn particle_explosion() -> particles::EmitterConfig {
+    particles::EmitterConfig {
+        local_coords: false,
+        one_shot: true,
+        emitting: true,
+        lifetime: 0.6,
+        lifetime_randomness: 0.3,
+        explosiveness: 0.65,
+        initial_direction_spread: 2.0 * std::f32::consts::PI,
+        initial_velocity: 300.0,
+        initial_velocity_randomness: 0.8,
+        size: 3.0,
+        size_randomness: 0.3,
+        colors_curve: ColorCurve {
+            start: RED,
+            mid: ORANGE,
+            end: RED,
+        },
+        ..Default::default()
+    }
+}
+
 fn draw_game_objects(
     squares: &[Shape],
     bullets: &[Shape],
     circle: &Shape,
+    explosions: &mut [(Emitter, Vec2)],
     score: u32,
     high_score: u32,
     high_score_beaten: bool,
@@ -124,15 +148,14 @@ fn draw_game_objects(
             bullet.color,
         );
     }
+    
+    for (explosion, coords) in explosions.iter_mut() {
+        explosion.draw(*coords);
+    }
+
     draw_circle(circle.x, circle.y, circle.size / 2.0, circle.color);
 
-    draw_text(
-        format!("Score: {}", score).as_str(),
-        10.0,
-        35.0,
-        25.0,
-        GOLD,
-    );
+    draw_text(format!("Score: {}", score).as_str(), 10.0, 35.0, 25.0, GOLD);
     let high_score_text = format!("High score: {}", high_score);
     let high_score_beaten_text = if high_score_beaten {
         "New high score!"
@@ -202,11 +225,16 @@ async fn main() {
     .unwrap();
 
     let (tx, rx) = channel();
-    let config = Config::default()
-        .with_poll_interval(Duration::from_secs(2));
+    let config = Config::default().with_poll_interval(Duration::from_secs(2));
     let mut watcher: RecommendedWatcher = Watcher::new(tx, config).unwrap();
-    watcher.watch(Path::new("src/starfield-shader.glsl"), RecursiveMode::Recursive).unwrap();
+    watcher
+        .watch(
+            Path::new("src/starfield-shader.glsl"),
+            RecursiveMode::Recursive,
+        )
+        .unwrap();
 
+    let mut explosions: Vec<(Emitter, Vec2)> = vec![];
 
     let mut game_state = GameState::MainMenu;
 
@@ -257,7 +285,7 @@ async fn main() {
             },
         );
         gl_use_default_material();
-    
+
         match game_state {
             GameState::MainMenu => {
                 if is_key_pressed(KeyCode::Escape) {
@@ -266,6 +294,7 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) {
                     squares.clear();
                     bullets.clear();
+                    explosions.clear();
                     circle.x = screen_width() / 2.0;
                     circle.y = screen_height() / 2.0;
                     score = 0;
@@ -367,6 +396,13 @@ async fn main() {
                                 high_score_beaten = true;
                                 high_score = score;
                             }
+                            explosions.push((
+                                Emitter::new(EmitterConfig {
+                                    amount: square.size.round() as u32 * 2,
+                                    ..particle_explosion()
+                                }),
+                                vec2(bullet.x, bullet.y),
+                            ));
                         }
                     }
                 }
@@ -375,14 +411,31 @@ async fn main() {
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 squares.retain(|square| !square.collided);
                 bullets.retain(|bullet| !bullet.collided);
+                explosions.retain(|(explosion, _)| explosion.config.emitting);
 
-                draw_game_objects(&squares, &bullets, &circle, score, high_score, high_score_beaten);
+                draw_game_objects(
+                    &squares,
+                    &bullets,
+                    &circle,
+                    &mut explosions,
+                    score,
+                    high_score,
+                    high_score_beaten,
+                );
             }
             GameState::Paused => {
                 if is_key_pressed(KeyCode::Space) {
                     game_state = GameState::Playing;
                 }
-                draw_game_objects(&squares, &bullets, &circle, score, high_score, high_score_beaten);
+                draw_game_objects(
+                    &squares,
+                    &bullets,
+                    &circle,
+                    &mut explosions,
+                    score,
+                    high_score,
+                    high_score_beaten,
+                );
                 let text = "Paused";
                 let text_dimensions = measure_text(text, None, 32, 1.0);
                 draw_text(
@@ -398,7 +451,15 @@ async fn main() {
                 if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::MainMenu;
                 }
-                draw_game_objects(&squares, &bullets, &circle, score, high_score, high_score_beaten);
+                draw_game_objects(
+                    &squares,
+                    &bullets,
+                    &circle,
+                    &mut explosions,
+                    score,
+                    high_score,
+                    high_score_beaten,
+                );
                 let game_over_text = "GAME OVER!";
                 let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
 
