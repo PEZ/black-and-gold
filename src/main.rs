@@ -13,7 +13,7 @@ use std::fs;
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
-const STARFIELD_SPEED: f32 = 0.05;
+const STARFIELD_SPEED: f32 = 0.01;
 const BALL_RADIUS: f32 = 16.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
 

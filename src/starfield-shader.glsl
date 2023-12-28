@@ -70,7 +70,7 @@ void main()
     vec2 uv = (gl_FragCoord.xy - .5 * iResolution.xy) / iResolution.y;
     float t = iTime * .02;
 
-    float speed = 3.0;
+    float speed = .5;
     vec2 direction = vec2(-0.25 + direction_modifier, -1.0) * speed;
 
     uv += direction;
