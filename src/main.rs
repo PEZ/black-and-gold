@@ -131,6 +131,8 @@ fn draw_game_objects(
     high_score_beaten: bool,
     bullet_sprite: &AnimatedSprite,
     bullet_texture: &Texture2D,
+    ship_sprite: &AnimatedSprite,
+    ship_texture: &Texture2D,
 ) {
     for square in squares {
         draw_rectangle(
@@ -157,11 +159,22 @@ fn draw_game_objects(
         );
     }
 
+    let ship_frame = ship_sprite.frame();
+    draw_texture_ex(
+        &ship_texture,
+        circle.x - ship_frame.dest_size.x,
+        circle.y - ship_frame.dest_size.y,
+        WHITE,
+        DrawTextureParams {
+            dest_size: Some(ship_frame.dest_size * 2.0),
+            source: Some(ship_frame.source_rect),
+            ..Default::default()
+        },
+    );
+
     for (explosion, coords) in explosions.iter_mut() {
         explosion.draw(*coords);
     }
-
-    draw_circle(circle.x, circle.y, circle.size / 2.0, circle.color);
 
     draw_text(format!("Score: {}", score).as_str(), 10.0, 35.0, 25.0, GOLD);
     let high_score_text = format!("High score: {}", high_score);
@@ -494,6 +507,8 @@ async fn main() {
                     high_score_beaten,
                     &bullet_sprite,
                     &bullet_texture,
+                    &ship_sprite,
+                    &ship_texture,
                 );
             }
             GameState::Paused => {
@@ -510,6 +525,8 @@ async fn main() {
                     high_score_beaten,
                     &bullet_sprite,
                     &bullet_texture,
+                    &ship_sprite,
+                    &ship_texture,
                 );
                 let text = "Paused";
                 let text_dimensions = measure_text(text, None, 32, 1.0);
@@ -536,6 +553,8 @@ async fn main() {
                     high_score_beaten,
                     &bullet_sprite,
                     &bullet_texture,
+                    &ship_sprite,
+                    &ship_texture,
                 );
                 let game_over_text = "GAME OVER!";
                 let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
