@@ -281,13 +281,25 @@ async fn main() {
                 fps: 12,
             },
             Animation {
-                name: "left".to_string(),
+                name: "left1".to_string(),
+                row: 1,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "left2".to_string(),
                 row: 2,
                 frames: 2,
                 fps: 12,
             },
             Animation {
-                name: "right".to_string(),
+                name: "right1".to_string(),
+                row: 3,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "right2".to_string(),
                 row: 4,
                 frames: 2,
                 fps: 12,
@@ -295,6 +307,9 @@ async fn main() {
         ],
         true,
     );
+
+    let mut left_direction_time = get_time();
+    let mut right_direction_time = get_time();
 
     let mut bullet_sprite = AnimatedSprite::new(
         16,
@@ -398,15 +413,30 @@ async fn main() {
                 let my_movement = delta_time * MOVEMENT_SPEED;
                 let star_movement = delta_time * STARFIELD_SPEED;
 
-                if is_key_down(KeyCode::Right) {
-                    circle.x += my_movement;
-                    direction_modifier += star_movement;
-                    ship_sprite.set_animation(2);
+                ship_sprite.set_animation(0);
+                if is_key_pressed(KeyCode::Left) {
+                    left_direction_time = get_time();
                 }
                 if is_key_down(KeyCode::Left) {
                     circle.x -= my_movement;
                     direction_modifier -= star_movement;
-                    ship_sprite.set_animation(1);
+                    ship_sprite.set_animation(if get_time() < left_direction_time + 0.5 {
+                        1
+                    } else {
+                        2
+                    });
+                }
+                if is_key_pressed(KeyCode::Right) {
+                    right_direction_time = get_time();
+                }
+                if is_key_down(KeyCode::Right) {
+                    circle.x += my_movement;
+                    direction_modifier += star_movement;
+                    ship_sprite.set_animation(if get_time() < right_direction_time + 0.5 {
+                        3
+                    } else {
+                        4
+                    });
                 }
                 if is_key_down(KeyCode::Down) {
                     circle.y += my_movement;
