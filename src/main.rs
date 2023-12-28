@@ -10,6 +10,11 @@ const MOVEMENT_SPEED: f32 = 200.0;
 const BALL_RADIUS: f32 = 32.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
 
+fn oscillating_alpha(base_color: Color, cycles_per_second: f32) -> Color {
+    let alpha = 0.5 * (1.0 + f32::sin(cycles_per_second * get_time() as f32 * PI / 2.0));
+    Color::new(base_color.r, base_color.g, base_color.b, alpha)
+}
+
 lazy_static! {
     static ref COLORS: Vec<Color> = vec![
         BEIGE, BLACK, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY,
@@ -83,6 +88,7 @@ async fn main() {
             circle.y = screen_height() / 2.0;
             score = 0;
             game_over = false;
+            high_score_beaten = false;
         }
 
         if !game_over {
@@ -146,7 +152,6 @@ async fn main() {
                 .any(|square| square.collides_with_circle(&circle))
             {
                 if score == high_score {
-                    high_score_beaten = true;
                     fs::write("highscore.dat", high_score.to_string()).ok();
                 }
                 game_over = true;
@@ -158,7 +163,10 @@ async fn main() {
                         bullet.collided = true;
                         square.collided = true;
                         score += square.size.round() as u32;
-                        high_score = high_score.max(score);
+                        if score > high_score {
+                            high_score_beaten = true;
+                            high_score = score;
+                        }
                     }
                 }
             }
@@ -197,16 +205,16 @@ async fn main() {
             25.0,
             WHITE,
         );
-        let high_score_line1 = format!("High score: {}", high_score);
-        let high_score_line2 = if high_score_beaten {
+        let high_score_text = format!("High score: {}", high_score);
+        let high_score_beaten_text = if high_score_beaten {
             "New high score!"
         } else {
             ""
         };
 
-        let text_dimensions = measure_text(high_score_line1.as_str(), None, 25, 1.0);
+        let text_dimensions = measure_text(high_score_text.as_str(), None, 25, 1.0);
         draw_text(
-            high_score_line1.as_str(),
+            high_score_text.as_str(),
             screen_width() - text_dimensions.width - 10.0,
             35.0,
             25.0,
@@ -214,16 +222,13 @@ async fn main() {
         );
 
         if high_score_beaten {
-            let text_dimensions = measure_text(high_score_line2, None, 25, 1.0);
-            let alpha = 0.5 * (1.0 + f32::sin(3.0 * get_time() as f32 * PI / 2.0));
-            let color = Color::new(WHITE.r, WHITE.g, WHITE.b, alpha);
-
+            let text_dimensions = measure_text(high_score_beaten_text, None, 25, 1.0);
             draw_text(
-                high_score_line2,
+                high_score_beaten_text,
                 screen_width() - text_dimensions.width - 10.0,
                 35.0 + text_dimensions.height + text_dimensions.offset_y,
                 25.0,
-                color,
+                oscillating_alpha(WHITE, 3.0),
             );
         }
 
