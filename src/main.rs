@@ -1,9 +1,21 @@
+#[macro_use]
+extern crate lazy_static;
+
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
+use std::f32::consts::PI;
+use std::fs;
 
 const MOVEMENT_SPEED: f32 = 200.0;
 const BALL_RADIUS: f32 = 32.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
+
+lazy_static! {
+    static ref COLORS: Vec<Color> = vec![
+        BEIGE, BLACK, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY,
+        GREEN, LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, WHITE, YELLOW,
+    ];
+}
 
 struct Shape {
     size: f32,
@@ -38,7 +50,12 @@ impl Shape {
 #[macroquad::main("Mitt spel")]
 async fn main() {
     rand::srand(miniquad::date::now() as u64);
-    let colors: Vec<Color> = vec![BLACK, RED, BLUE, GREEN, PINK, SKYBLUE, DARKBLUE];
+
+    let mut score: u32 = 0;
+    let mut high_score: u32 = fs::read_to_string("highscore.dat")
+        .map_or(Ok(0), |i| i.parse::<u32>())
+        .unwrap_or(0);
+    let mut high_score_beaten = false;
 
     let mut last_bullet_time = get_time();
     let mut squares = vec![];
@@ -64,6 +81,7 @@ async fn main() {
             bullets.clear();
             circle.x = screen_width() / 2.0;
             circle.y = screen_height() / 2.0;
+            score = 0;
             game_over = false;
         }
 
@@ -111,7 +129,7 @@ async fn main() {
                     speed: rand::gen_range(50.0, 150.0),
                     x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                     y: -size,
-                    color: *colors.choose().unwrap(),
+                    color: *COLORS.choose().unwrap(),
                     collided: false,
                 });
             }
@@ -127,6 +145,10 @@ async fn main() {
                 .iter()
                 .any(|square| square.collides_with_circle(&circle))
             {
+                if score == high_score {
+                    high_score_beaten = true;
+                    fs::write("highscore.dat", high_score.to_string()).ok();
+                }
                 game_over = true;
             }
 
@@ -135,6 +157,8 @@ async fn main() {
                     if bullet.collides_with(square) {
                         bullet.collided = true;
                         square.collided = true;
+                        score += square.size.round() as u32;
+                        high_score = high_score.max(score);
                     }
                 }
             }
@@ -165,6 +189,43 @@ async fn main() {
             );
         }
         draw_circle(circle.x, circle.y, circle.size / 2.0, circle.color);
+
+        draw_text(
+            format!("Poäng: {}", score).as_str(),
+            10.0,
+            35.0,
+            25.0,
+            WHITE,
+        );
+        let high_score_line1 = format!("High score: {}", high_score);
+        let high_score_line2 = if high_score_beaten {
+            "New high score!"
+        } else {
+            ""
+        };
+
+        let text_dimensions = measure_text(high_score_line1.as_str(), None, 25, 1.0);
+        draw_text(
+            high_score_line1.as_str(),
+            screen_width() - text_dimensions.width - 10.0,
+            35.0,
+            25.0,
+            WHITE,
+        );
+
+        if high_score_beaten {
+            let text_dimensions = measure_text(high_score_line2, None, 25, 1.0);
+            let alpha = 0.5 * (1.0 + f32::sin(3.0 * get_time() as f32 * PI / 2.0));
+            let color = Color::new(WHITE.r, WHITE.g, WHITE.b, alpha);
+
+            draw_text(
+                high_score_line2,
+                screen_width() - text_dimensions.width - 10.0,
+                35.0 + text_dimensions.height + text_dimensions.offset_y,
+                25.0,
+                color,
+            );
+        }
 
         if game_over {
             let game_over_text = "GAME OVER! Press space to restart.";
