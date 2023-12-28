@@ -8,18 +8,32 @@ use std::fs;
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
+const STARFIELD_SPEED: f32 = 0.05;
 const BALL_RADIUS: f32 = 32.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
 
-fn oscillating_alpha(base_color: Color, cycles_per_second: f32) -> Color {
-    let alpha = 0.5 * (1.0 + f32::sin(cycles_per_second * get_time() as f32 * PI / 2.0));
-    Color::new(base_color.r, base_color.g, base_color.b, alpha)
+const FRAGMENT_SHADER: &str = include_str!("starfield-shader.glsl");
+
+const VERTEX_SHADER: &str = "#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
+attribute vec4 color0;
+varying float iTime;
+
+uniform mat4 Model;
+uniform mat4 Projection;
+uniform vec4 _Time;
+
+void main() {
+    gl_Position = Projection * Model * vec4(position, 1);
+    iTime = _Time.x;
 }
+";
 
 lazy_static! {
-    static ref COLORS: Vec<Color> = vec![
-        BEIGE, BLACK, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY,
-        GREEN, LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, BLACK, YELLOW,
+    static ref ENEMY_COLORS: Vec<Color> = vec![
+        BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY,
+        GREEN, LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
     ];
 }
 
@@ -60,6 +74,11 @@ enum GameState {
     GameOver,
 }
 
+fn oscillating_alpha(base_color: Color, cycles_per_second: f32) -> Color {
+    let alpha = 0.5 * (1.0 + f32::sin(cycles_per_second * get_time() as f32 * PI / 2.0));
+    Color::new(base_color.r, base_color.g, base_color.b, alpha)
+}
+
 fn draw_game_title() {
     let text = GAME_TITLE;
     let font_size = 144;
@@ -69,7 +88,7 @@ fn draw_game_title() {
         screen_width() / 2.0 - text_dimensions.width / 2.0,
         screen_height() / 4.0,
         font_size as f32,
-        BLACK,
+        GOLD,
     );
 }
 
@@ -107,7 +126,7 @@ fn draw_game_objects(
         10.0,
         35.0,
         25.0,
-        BLACK,
+        GOLD,
     );
     let high_score_text = format!("High score: {}", high_score);
     let high_score_beaten_text = if high_score_beaten {
@@ -122,7 +141,7 @@ fn draw_game_objects(
         screen_width() - text_dimensions.width - 10.0,
         35.0,
         25.0,
-        BLACK,
+        GOLD,
     );
 
     if high_score_beaten {
@@ -132,7 +151,7 @@ fn draw_game_objects(
             screen_width() - text_dimensions.width - 10.0,
             35.0 + text_dimensions.height + text_dimensions.offset_y,
             25.0,
-            oscillating_alpha(BLACK, 3.0),
+            oscillating_alpha(GOLD, 3.0),
         );
     }
 }
@@ -155,19 +174,52 @@ async fn main() {
         speed: MOVEMENT_SPEED,
         x: screen_width() / 2.0,
         y: screen_height() / 2.0,
-        color: DARKPURPLE,
+        color: GOLD,
         collided: false,
     };
+
+    let mut direction_modifier: f32 = 0.0;
+    let render_target = render_target(320, 150);
+    render_target.texture.set_filter(FilterMode::Nearest);
+    let material = load_material(
+        ShaderSource::Glsl {
+            vertex: VERTEX_SHADER,
+            fragment: FRAGMENT_SHADER,
+        },
+        MaterialParams {
+            uniforms: vec![
+                ("iResolution".to_owned(), UniformType::Float2),
+                ("direction_modifier".to_owned(), UniformType::Float1),
+            ],
+            ..Default::default()
+        },
+    )
+    .unwrap();
 
     let mut game_state = GameState::MainMenu;
 
     loop {
-        clear_background(GOLD);
+        clear_background(BLACK);
 
+        material.set_uniform("iResolution", (screen_width(), screen_height()));
+        material.set_uniform("direction_modifier", direction_modifier);
+        gl_use_material(&material);
+        draw_texture_ex(
+            &render_target.texture,
+            0.,
+            0.,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(screen_width(), screen_height())),
+                ..Default::default()
+            },
+        );
+        gl_use_default_material();
+    
         match game_state {
             GameState::MainMenu => {
                 if is_key_pressed(KeyCode::Escape) {
-                    break;
+                    std::process::exit(0);
                 }
                 if is_key_pressed(KeyCode::Space) {
                     squares.clear();
@@ -185,7 +237,7 @@ async fn main() {
                 let text_y =
                     screen_height() / 2.0 - text_dimensions.offset_y + text_dimensions.height;
 
-                draw_text(text, text_x, text_y, 32.0, BLACK);
+                draw_text(text, text_x, text_y, 32.0, GOLD);
                 draw_game_title();
             }
             GameState::Playing => {
@@ -193,19 +245,22 @@ async fn main() {
                     game_state = GameState::Paused;
                 }
                 let delta_time = get_frame_time();
-                let movement = delta_time * MOVEMENT_SPEED;
+                let my_movement = delta_time * MOVEMENT_SPEED;
+                let star_movement = delta_time * STARFIELD_SPEED;
 
                 if is_key_down(KeyCode::Right) {
-                    circle.x += movement;
+                    circle.x += my_movement;
+                    direction_modifier += star_movement;
                 }
                 if is_key_down(KeyCode::Left) {
-                    circle.x -= movement;
+                    circle.x -= my_movement;
+                    direction_modifier -= star_movement;
                 }
                 if is_key_down(KeyCode::Down) {
-                    circle.y += movement;
+                    circle.y += my_movement;
                 }
                 if is_key_down(KeyCode::Up) {
-                    circle.y -= movement;
+                    circle.y -= my_movement;
                 }
 
                 circle.x = circle
@@ -225,7 +280,7 @@ async fn main() {
                         x: circle.x,
                         y: circle.y,
                         speed: circle.speed * 2.0,
-                        color: MAROON,
+                        color: GOLD,
                         size: 5.0,
                         collided: false,
                     });
@@ -238,7 +293,7 @@ async fn main() {
                         speed: rand::gen_range(50.0, 150.0),
                         x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                         y: -size,
-                        color: *COLORS.choose().unwrap(),
+                        color: *ENEMY_COLORS.choose().unwrap(),
                         collided: false,
                     });
                 }
@@ -293,7 +348,7 @@ async fn main() {
                     screen_width() / 2.0 - text_dimensions.width / 2.0,
                     screen_height() / 2.0,
                     32.0,
-                    BLACK,
+                    GOLD,
                 );
                 draw_game_title();
             }
@@ -309,7 +364,7 @@ async fn main() {
                 let text_y =
                     screen_height() / 2.0 - text_dimensions.offset_y + text_dimensions.height;
 
-                draw_text(game_over_text, text_x, text_y, 32.0, BLACK);
+                draw_text(game_over_text, text_x, text_y, 32.0, GOLD);
                 draw_game_title();
             }
         }
