@@ -2,15 +2,16 @@
 extern crate lazy_static;
 
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
+use std::f32::consts::PI;
+use std::fs;
 use std::path::Path;
 use std::sync::mpsc::channel;
 use std::time::Duration;
 
+use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
-use std::f32::consts::PI;
-use std::fs;
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
@@ -128,6 +129,8 @@ fn draw_game_objects(
     score: u32,
     high_score: u32,
     high_score_beaten: bool,
+    bullet_sprite: &AnimatedSprite,
+    bullet_texture: &Texture2D,
 ) {
     for square in squares {
         draw_rectangle(
@@ -139,16 +142,21 @@ fn draw_game_objects(
         );
     }
 
+    let bullet_frame = bullet_sprite.frame();
     for bullet in bullets {
-        draw_rectangle(
+        draw_texture_ex(
+            &bullet_texture,
             bullet.x - bullet.size / 2.0,
             bullet.y - bullet.size / 2.0,
-            bullet.size,
-            bullet.size,
             bullet.color,
+            DrawTextureParams {
+                dest_size: Some(vec2(bullet.size, bullet.size)),
+                source: Some(bullet_frame.source_rect),
+                ..Default::default()
+            },
         );
     }
-    
+
     for (explosion, coords) in explosions.iter_mut() {
         explosion.draw(*coords);
     }
@@ -238,6 +246,64 @@ async fn main() {
 
     let mut game_state = GameState::MainMenu;
 
+    set_pc_assets_folder("assets");
+
+    let ship_texture: Texture2D = load_texture("ship.png").await.expect("Couldn't load file");
+    ship_texture.set_filter(FilterMode::Nearest);
+    let bullet_texture: Texture2D = load_texture("laser-bolts.png")
+        .await
+        .expect("Couldn't load file");
+    bullet_texture.set_filter(FilterMode::Nearest);
+
+    // build_textures_atlas();
+
+    let mut ship_sprite = AnimatedSprite::new(
+        16,
+        24,
+        &[
+            Animation {
+                name: "idle".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "left".to_string(),
+                row: 2,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "right".to_string(),
+                row: 4,
+                frames: 2,
+                fps: 12,
+            },
+        ],
+        true,
+    );
+
+    let mut bullet_sprite = AnimatedSprite::new(
+        16,
+        16,
+        &[
+            Animation {
+                name: "bullet".to_string(),
+                row: 0,
+                frames: 2,
+                fps: 12,
+            },
+            Animation {
+                name: "bolt".to_string(),
+                row: 1,
+                frames: 2,
+                fps: 12,
+            },
+        ],
+        true,
+    );
+    bullet_sprite.set_animation(1);
+
     loop {
         clear_background(BLACK);
 
@@ -322,10 +388,12 @@ async fn main() {
                 if is_key_down(KeyCode::Right) {
                     circle.x += my_movement;
                     direction_modifier += star_movement;
+                    ship_sprite.set_animation(2);
                 }
                 if is_key_down(KeyCode::Left) {
                     circle.x -= my_movement;
                     direction_modifier -= star_movement;
+                    ship_sprite.set_animation(1);
                 }
                 if is_key_down(KeyCode::Down) {
                     circle.y += my_movement;
@@ -349,10 +417,10 @@ async fn main() {
                     last_bullet_time = get_time();
                     bullets.push(Shape {
                         x: circle.x,
-                        y: circle.y,
+                        y: circle.y - 24.0,
                         speed: circle.speed * 2.0,
                         color: GOLD,
-                        size: 5.0,
+                        size: 32.0,
                         collided: false,
                     });
                 }
@@ -375,6 +443,9 @@ async fn main() {
                 for bullet in &mut bullets {
                     bullet.y -= bullet.speed * delta_time;
                 }
+
+                ship_sprite.update();
+                bullet_sprite.update();
 
                 if squares
                     .iter()
@@ -421,6 +492,8 @@ async fn main() {
                     score,
                     high_score,
                     high_score_beaten,
+                    &bullet_sprite,
+                    &bullet_texture,
                 );
             }
             GameState::Paused => {
@@ -435,6 +508,8 @@ async fn main() {
                     score,
                     high_score,
                     high_score_beaten,
+                    &bullet_sprite,
+                    &bullet_texture,
                 );
                 let text = "Paused";
                 let text_dimensions = measure_text(text, None, 32, 1.0);
@@ -459,6 +534,8 @@ async fn main() {
                     score,
                     high_score,
                     high_score_beaten,
+                    &bullet_sprite,
+                    &bullet_texture,
                 );
                 let game_over_text = "GAME OVER!";
                 let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
