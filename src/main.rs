@@ -11,7 +11,7 @@ use std::time::Duration;
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
-use macroquad_particles::{self as particles, ColorCurve, Emitter, EmitterConfig};
+use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
@@ -108,15 +108,11 @@ fn particle_explosion() -> particles::EmitterConfig {
         lifetime_randomness: 0.3,
         explosiveness: 0.65,
         initial_direction_spread: 2.0 * std::f32::consts::PI,
-        initial_velocity: 300.0,
+        initial_velocity: 400.0,
         initial_velocity_randomness: 0.8,
-        size: 3.0,
+        size: 16.0,
         size_randomness: 0.3,
-        colors_curve: ColorCurve {
-            start: RED,
-            mid: ORANGE,
-            end: RED,
-        },
+        atlas: Some(AtlasConfig::new(5, 1, 0..)),
         ..Default::default()
     }
 }
@@ -133,14 +129,21 @@ fn draw_game_objects(
     bullet_texture: &Texture2D,
     ship_sprite: &AnimatedSprite,
     ship_texture: &Texture2D,
+    enemy_small_sprite: &AnimatedSprite,
+    enemy_small_texture: &Texture2D,
 ) {
+    let enemy_frame = enemy_small_sprite.frame();
     for square in squares {
-        draw_rectangle(
+        draw_texture_ex(
+            &enemy_small_texture,
             square.x - square.size / 2.0,
             square.y - square.size / 2.0,
-            square.size,
-            square.size,
-            square.color,
+            WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(square.size, square.size)),
+                source: Some(enemy_frame.source_rect),
+                ..Default::default()
+            },
         );
     }
 
@@ -268,6 +271,16 @@ async fn main() {
         .expect("Couldn't load file");
     bullet_texture.set_filter(FilterMode::Nearest);
 
+    let explosion_texture: Texture2D = load_texture("explosion.png")
+        .await
+        .expect("Couldn't load file");
+    explosion_texture.set_filter(FilterMode::Nearest);
+
+    let enemy_small_texture: Texture2D = load_texture("enemy-small.png")
+        .await
+        .expect("Couldn't load file");
+    enemy_small_texture.set_filter(FilterMode::Nearest);
+
     // build_textures_atlas();
 
     let mut ship_sprite = AnimatedSprite::new(
@@ -331,6 +344,18 @@ async fn main() {
         true,
     );
     bullet_sprite.set_animation(1);
+
+    let mut enemy_small_sprite = AnimatedSprite::new(
+        17,
+        16,
+        &[Animation {
+            name: "enemy_small".to_string(),
+            row: 0,
+            frames: 2,
+            fps: 12,
+        }],
+        true,
+    );
 
     loop {
         clear_background(BLACK);
@@ -489,6 +514,7 @@ async fn main() {
 
                 ship_sprite.update();
                 bullet_sprite.update();
+                enemy_small_sprite.update();
 
                 if squares
                     .iter()
@@ -512,7 +538,8 @@ async fn main() {
                             }
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: square.size.round() as u32 * 2,
+                                    amount: square.size.round() as u32 * 4,
+                                    texture: Some(explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
                                 vec2(bullet.x, bullet.y),
@@ -539,6 +566,8 @@ async fn main() {
                     &bullet_texture,
                     &ship_sprite,
                     &ship_texture,
+                    &enemy_small_sprite,
+                    &enemy_small_texture,
                 );
             }
             GameState::Paused => {
@@ -557,6 +586,8 @@ async fn main() {
                     &bullet_texture,
                     &ship_sprite,
                     &ship_texture,
+                    &enemy_small_sprite,
+                    &enemy_small_texture,
                 );
                 let text = "Paused";
                 let text_dimensions = measure_text(text, None, 32, 1.0);
@@ -585,6 +616,8 @@ async fn main() {
                     &bullet_texture,
                     &ship_sprite,
                     &ship_texture,
+                    &enemy_small_sprite,
+                    &enemy_small_texture,
                 );
                 let game_over_text = "GAME OVER!";
                 let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
