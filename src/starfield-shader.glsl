@@ -55,8 +55,8 @@ vec3 StarLayer(vec2 uv) {
 
             float n = Hash21(id + offs); // random between 0 and 1
             float size = fract(n * 345.32);
-            float star = Star(gv - offs - vec2(n, fract(n * 42.)) + .5, smoothstep(.9, 1., size) * .6);
-            vec3 color = sin(vec3(.8, .8, .8) * fract(n * 2345.2) * 123.2) * .5 + .5;
+            float star = Star(gv - offs - vec2(n, fract(n * 42.)) + .5, smoothstep(.9, 1., size) * 1.6);
+            vec3 color = sin(vec3(.8, .8, .4) * fract(n * 2345.2) * 123.2) * .5 + .5;
             color = color * vec3(0.25, 0.25, 0.20);
             star *= sin(iTime * 3. + n * 6.2831) * .5 + 1.;
             col += star * size * color;

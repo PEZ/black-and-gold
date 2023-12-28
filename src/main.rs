@@ -1,6 +1,11 @@
 #[macro_use]
 extern crate lazy_static;
 
+use notify::{RecommendedWatcher, RecursiveMode, Watcher, Config};
+use std::sync::mpsc::channel;
+use std::time::Duration;
+use std::path::Path;
+
 use macroquad::rand::ChooseRandom;
 use macroquad::prelude::*;
 use std::f32::consts::PI;
@@ -181,7 +186,7 @@ async fn main() {
     let mut direction_modifier: f32 = 0.0;
     let render_target = render_target(320, 150);
     render_target.texture.set_filter(FilterMode::Nearest);
-    let material = load_material(
+    let mut material = load_material(
         ShaderSource::Glsl {
             vertex: VERTEX_SHADER,
             fragment: FRAGMENT_SHADER,
@@ -196,13 +201,50 @@ async fn main() {
     )
     .unwrap();
 
+    let (tx, rx) = channel();
+    let config = Config::default()
+        .with_poll_interval(Duration::from_secs(2));
+    let mut watcher: RecommendedWatcher = Watcher::new(tx, config).unwrap();
+    watcher.watch(Path::new("src/starfield-shader.glsl"), RecursiveMode::Recursive).unwrap();
+
+
     let mut game_state = GameState::MainMenu;
 
     loop {
         clear_background(BLACK);
 
+        match rx.try_recv() {
+            Ok(event) => {
+                println!("File change detected: {:?}", event);
+                match fs::read_to_string("src/starfield-shader.glsl") {
+                    Ok(shader_code) => {
+                        material = load_material(
+                            ShaderSource::Glsl {
+                                vertex: VERTEX_SHADER,
+                                fragment: &shader_code,
+                            },
+                            MaterialParams {
+                                uniforms: vec![
+                                    ("iResolution".to_owned(), UniformType::Float2),
+                                    ("direction_modifier".to_owned(), UniformType::Float1),
+                                ],
+                                ..Default::default()
+                            },
+                        )
+                        .unwrap_or_else(|e| {
+                            println!("Error reloading shader: {:?}", e);
+                            material
+                        });
+                    }
+                    Err(e) => println!("Error reading shader file: {:?}", e),
+                }
+            }
+            Err(_) => {}
+        }
+
         material.set_uniform("iResolution", (screen_width(), screen_height()));
         material.set_uniform("direction_modifier", direction_modifier);
+
         gl_use_material(&material);
         draw_texture_ex(
             &render_target.texture,
