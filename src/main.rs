@@ -52,7 +52,7 @@ impl Shape {
     }
 }
 
-#[macroquad::main("Mitt spel")]
+#[macroquad::main("My first Macroquad game")]
 async fn main() {
     rand::srand(miniquad::date::now() as u64);
 
