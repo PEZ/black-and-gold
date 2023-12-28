@@ -6,6 +6,7 @@ use macroquad::prelude::*;
 use std::f32::consts::PI;
 use std::fs;
 
+const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
 const BALL_RADIUS: f32 = 32.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
@@ -57,6 +58,19 @@ enum GameState {
     Playing,
     Paused,
     GameOver,
+}
+
+fn draw_game_title() {
+    let text = GAME_TITLE;
+    let font_size = 144;
+    let text_dimensions = measure_text(text, None, font_size, 1.0);
+    draw_text(
+        text,
+        screen_width() / 2.0 - text_dimensions.width / 2.0,
+        screen_height() / 4.0,
+        font_size as f32,
+        BLACK,
+    );
 }
 
 fn draw_game_objects(
@@ -123,7 +137,7 @@ fn draw_game_objects(
     }
 }
 
-#[macroquad::main("My first Macroquad game")]
+#[macroquad::main("¡Viva la libertad, CARAJO!")]
 async fn main() {
     rand::srand(miniquad::date::now() as u64);
 
@@ -172,6 +186,7 @@ async fn main() {
                     screen_height() / 2.0 - text_dimensions.offset_y + text_dimensions.height;
 
                 draw_text(text, text_x, text_y, 32.0, BLACK);
+                draw_game_title();
             }
             GameState::Playing => {
                 if is_key_pressed(KeyCode::Escape) {
@@ -280,6 +295,7 @@ async fn main() {
                     32.0,
                     BLACK,
                 );
+                draw_game_title();
             }
             GameState::GameOver => {
                 if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape) {
@@ -294,6 +310,7 @@ async fn main() {
                     screen_height() / 2.0 - text_dimensions.offset_y + text_dimensions.height;
 
                 draw_text(game_over_text, text_x, text_y, 32.0, BLACK);
+                draw_game_title();
             }
         }
 
