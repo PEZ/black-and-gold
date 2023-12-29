@@ -23,15 +23,16 @@ jobs:
 
       - name: Prepare Deployment Directory
         run: |
-          mkdir ./docs
-          cp ./target/wasm32-unknown-unknown/release/mitt-spel.wasm ./docs/
-          cp -r ./assets/* ./docs
+          mkdir -p ./deploy/assets
+          cp ./target/wasm32-unknown-unknown/release/mitt-spel.wasm ./deploy/
+          cp index.html ./deploy/
+          cp -r ./assets/* ./deploy/assets
 
       - name: List Deployment Files
-        run: ls -l ./docs
+        run: ls -l ./deploy
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          publish_dir: ./deploy
