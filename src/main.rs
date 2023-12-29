@@ -13,6 +13,8 @@ use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 use macroquad::ui::{hash, root_ui, Skin};
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
+use macroquad::experimental::collections::storage;
+use macroquad::experimental::coroutines::start_coroutine;
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
@@ -194,6 +196,31 @@ impl Resources {
             ui_skin,
         })
     }
+
+    pub async fn load() -> Result<(), macroquad::Error> {
+        let resources_loading = start_coroutine(async move {
+            let resources = Resources::new().await.unwrap();
+            storage::store(resources);
+        });
+
+        while !resources_loading.is_done() {
+            clear_background(BLACK);
+            let text = format!(
+                "Loading resources {}",
+                ".".repeat(((get_time() * 2.) as usize) % 4)
+            );
+            draw_text(
+                &text,
+                screen_width() / 2. - 160.,
+                screen_height() / 2.,
+                40.,
+                WHITE,
+            );
+            next_frame().await;
+        }
+
+        Ok(())
+    }
 }
 
 fn draw_game_objects(
@@ -329,7 +356,9 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut game_state = GameState::MainMenu;
 
     set_pc_assets_folder("assets");
-    let resources = Resources::new().await?;
+    Resources::load().await?;
+    let resources = storage::get::<Resources>();
+
 
     play_sound(
         &resources.theme_music,
