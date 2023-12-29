@@ -464,6 +464,8 @@ async fn main() -> Result<(), macroquad::Error> {
         );
         gl_use_default_material();
 
+        let mut exit_game = false;
+
         match game_state {
             GameState::MainMenu => {
                 set_sound_volume(&resources.theme_music, 0.2);
@@ -486,7 +488,8 @@ async fn main() -> Result<(), macroquad::Error> {
                             game_state = GameState::Playing;
                         }
                         if ui.button(vec2(66.0, 125.0), "Exit") {
-                            std::process::exit(0);
+                            //std::process::exit(0);
+                            exit_game = true;
                         }
                     },
                 );
@@ -698,7 +701,9 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title();
             }
         }
-
+        if exit_game {
+            return Ok(());
+        }
         next_frame().await
     }
 }
