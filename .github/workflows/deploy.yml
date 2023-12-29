@@ -23,7 +23,7 @@ jobs:
 
       - name: Prepare Deployment Directory
         run: |
-          mkdir ./deploy
+          mkdir ./docs
           cp ./target/wasm32-unknown-unknown/release/mitt-spel.wasm ./docs/
           cp -r ./assets/* ./docs
 
