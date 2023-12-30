@@ -9,12 +9,12 @@ use macroquad::audio::{
 };
 
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
+use macroquad::experimental::collections::storage;
+use macroquad::experimental::coroutines::start_coroutine;
 use macroquad::prelude::*;
 use macroquad::rand::ChooseRandom;
 use macroquad::ui::{hash, root_ui, Skin};
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
-use macroquad::experimental::collections::storage;
-use macroquad::experimental::coroutines::start_coroutine;
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 200.0;
@@ -57,8 +57,13 @@ struct Shape {
 }
 
 struct Enemy {
+    id: usize,
     shape: Shape,
-    bullet_count: u32,
+    bullet_count: usize,
+}
+struct EnemyBullet {
+    enemy_id: usize,
+    shape: Shape,
 }
 
 impl Shape {
@@ -231,7 +236,7 @@ impl Resources {
 fn draw_game_objects(
     enemies: &[Enemy],
     bullets: &[Shape],
-    enemy_bullets: &[Shape],
+    enemy_bullets: &[EnemyBullet],
     circle: &Shape,
     explosions: &mut [(Emitter, Vec2)],
     score: u32,
@@ -262,11 +267,11 @@ fn draw_game_objects(
     for bullet in enemy_bullets {
         draw_texture_ex(
             &resources.bullet_texture,
-            bullet.x - bullet.size / 2.0,
-            bullet.y - bullet.size / 2.0,
-            bullet.color,
+            bullet.shape.x - bullet.shape.size / 2.0,
+            bullet.shape.y - bullet.shape.size / 2.0,
+            bullet.shape.color,
             DrawTextureParams {
-                dest_size: Some(vec2(bullet.size, bullet.size)),
+                dest_size: Some(vec2(bullet.shape.size, bullet.shape.size)),
                 source: Some(bullet_frame.source_rect),
                 rotation: PI,
                 ..Default::default()
@@ -347,8 +352,9 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut last_bullet_time = get_time();
     let mut enemies = vec![];
+    let mut next_enemy_id = 0;
     let mut bullets: Vec<Shape> = vec![];
-    let mut enemy_bullets: Vec<Shape> = vec![];
+    let mut enemy_bullets: Vec<EnemyBullet> = vec![];
     let mut circle = Shape {
         size: BALL_RADIUS * 2.0,
         speed: MOVEMENT_SPEED,
@@ -382,7 +388,6 @@ async fn main() -> Result<(), macroquad::Error> {
     set_pc_assets_folder("assets");
     Resources::load().await?;
     let resources = storage::get::<Resources>();
-
 
     play_sound(
         &resources.theme_music,
@@ -436,14 +441,12 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut bullet_sprite = AnimatedSprite::new(
         16,
         16,
-        &[
-            Animation {
-                name: "bolt".to_string(),
-                row: 1,
-                frames: 2,
-                fps: 12,
-            },
-        ],
+        &[Animation {
+            name: "bolt".to_string(),
+            row: 1,
+            frames: 2,
+            fps: 12,
+        }],
         true,
     );
     bullet_sprite.set_animation(0);
@@ -451,14 +454,12 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut enemy_bullet_sprite = AnimatedSprite::new(
         16,
         16,
-        &[
-            Animation {
-                name: "bolt".to_string(),
-                row: 1,
-                frames: 2,
-                fps: 12,
-            },
-        ],
+        &[Animation {
+            name: "bolt".to_string(),
+            row: 1,
+            frames: 2,
+            fps: 12,
+        }],
         true,
     );
     enemy_bullet_sprite.set_animation(0);
@@ -596,6 +597,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 if rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0);
                     enemies.push(Enemy {
+                        id: next_enemy_id,
                         bullet_count: 0,
                         shape: Shape {
                             size,
@@ -606,6 +608,7 @@ async fn main() -> Result<(), macroquad::Error> {
                             collided: false,
                         },
                     });
+                    next_enemy_id += 1;
                 }
 
                 for enemy in &mut enemies {
@@ -615,8 +618,8 @@ async fn main() -> Result<(), macroquad::Error> {
                     bullet.y -= bullet.speed * delta_time;
                 }
                 for bullet in &mut enemy_bullets {
-                    bullet.y += bullet.speed * delta_time;
-                }    
+                    bullet.shape.y += bullet.shape.speed * delta_time;
+                }
 
                 ship_sprite.update();
                 bullet_sprite.update();
@@ -653,30 +656,37 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
-                    if enemy.shape.x > circle.x && enemy.shape.x < circle.x + circle.size && enemy.bullet_count < 1 {
-                        enemy_bullets.push(Shape {
-                            x: enemy.shape.x,
-                            y: enemy.shape.y + enemy.shape.size / 2.0,
-                            speed: enemy.shape.speed * 3.0,
-                            color: RED,
-                            size: 32.0,
-                            collided: false,
+                    if enemy.shape.x > circle.x
+                        && enemy.shape.x < circle.x + circle.size
+                        && enemy.bullet_count < 1
+                    {
+                        enemy_bullets.push(EnemyBullet {
+                            enemy_id: enemy.id,
+                            shape: Shape {
+                                x: enemy.shape.x,
+                                y: enemy.shape.y + enemy.shape.size / 2.0,
+                                speed: enemy.shape.speed * 3.0,
+                                color: RED,
+                                size: 32.0,
+                                collided: false,
+                            },
                         });
                         enemy.bullet_count += 1;
                     }
                 }
 
                 enemy_bullets.retain(|bullet| {
-                    let should_keep = bullet.y < screen_height() + bullet.size;
-                    // if !should_keep {
-                    //     // Find the enemy that fired this bullet and decrement their bullet_count
-                    //     if let Some(enemy) = enemies.iter_mut().find(|enemy| enemy.bullets.contains(bullet)) {
-                    //         enemy.bullet_count -= 1;
-                    //     }
-                    // }
+                    let should_keep = bullet.shape.y < screen_height() + bullet.shape.size;
+                    if !should_keep {
+                        if let Some(enemy) =
+                            enemies.iter_mut().find(|enemy| enemy.id == bullet.enemy_id)
+                        {
+                            enemy.bullet_count -= 1;
+                        }
+                    }
                     should_keep
                 });
-    
+
                 enemies.retain(|enemy| enemy.shape.y < screen_width() + enemy.shape.size);
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 enemies.retain(|enemy| !enemy.shape.collided);
