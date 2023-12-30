@@ -286,7 +286,7 @@ checksum = "b5e6163cb8c49088c2c36f57875e58ccd8c87c7427f7fbd50ea6710b2f3f2e8f"
 [[package]]
 name = "macroquad"
 version = "0.4.4"
-source = "git+https://github.com/not-fl3/macroquad.git#617b2c87fa9e611263b96f52f009dada9a656593"
+source = "git+https://github.com/not-fl3/macroquad.git#adb1e77026df402a7288e9cf55a4a21113b0acf2"
 dependencies = [
  "bumpalo",
  "fontdue",
@@ -302,7 +302,7 @@ dependencies = [
 [[package]]
 name = "macroquad-particles"
 version = "0.2.0"
-source = "git+https://github.com/not-fl3/macroquad.git#617b2c87fa9e611263b96f52f009dada9a656593"
+source = "git+https://github.com/not-fl3/macroquad.git#adb1e77026df402a7288e9cf55a4a21113b0acf2"
 dependencies = [
  "macroquad",
 ]
@@ -310,7 +310,7 @@ dependencies = [
 [[package]]
 name = "macroquad_macro"
 version = "0.1.7"
-source = "git+https://github.com/not-fl3/macroquad.git#617b2c87fa9e611263b96f52f009dada9a656593"
+source = "git+https://github.com/not-fl3/macroquad.git#adb1e77026df402a7288e9cf55a4a21113b0acf2"
 
 [[package]]
 name = "malloc_buf"
