@@ -56,6 +56,11 @@ struct Shape {
     collided: bool,
 }
 
+struct Enemy {
+    shape: Shape,
+    bullet_count: u32,
+}
+
 impl Shape {
     fn collides_with_circle(&self, circle: &Shape) -> bool {
         let half = self.size / 2.0;
@@ -224,28 +229,46 @@ impl Resources {
 }
 
 fn draw_game_objects(
-    squares: &[Shape],
+    enemies: &[Enemy],
     bullets: &[Shape],
+    enemy_bullets: &[Shape],
     circle: &Shape,
     explosions: &mut [(Emitter, Vec2)],
     score: u32,
     high_score: u32,
     high_score_beaten: bool,
     bullet_sprite: &AnimatedSprite,
+    enemy_bullet_sprite: &AnimatedSprite,
     ship_sprite: &AnimatedSprite,
     enemy_small_sprite: &AnimatedSprite,
     resources: &Resources,
 ) {
-    let enemy_frame = enemy_small_sprite.frame();
-    for square in squares {
+    let enemy_frame: animation::AnimationFrame = enemy_small_sprite.frame();
+    for enemy in enemies {
         draw_texture_ex(
             &resources.enemy_small_texture,
-            square.x - square.size / 2.0,
-            square.y - square.size / 2.0,
-            WHITE,
+            enemy.shape.x - enemy.shape.size / 2.0,
+            enemy.shape.y - enemy.shape.size / 2.0,
+            WHITE, // square.color,
             DrawTextureParams {
-                dest_size: Some(vec2(square.size, square.size)),
+                dest_size: Some(vec2(enemy.shape.size, enemy.shape.size)),
                 source: Some(enemy_frame.source_rect),
+                ..Default::default()
+            },
+        );
+    }
+
+    let bullet_frame = enemy_bullet_sprite.frame();
+    for bullet in enemy_bullets {
+        draw_texture_ex(
+            &resources.bullet_texture,
+            bullet.x - bullet.size / 2.0,
+            bullet.y - bullet.size / 2.0,
+            bullet.color,
+            DrawTextureParams {
+                dest_size: Some(vec2(bullet.size, bullet.size)),
+                source: Some(bullet_frame.source_rect),
+                rotation: PI,
                 ..Default::default()
             },
         );
@@ -323,8 +346,9 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut high_score_beaten = false;
 
     let mut last_bullet_time = get_time();
-    let mut squares = vec![];
+    let mut enemies = vec![];
     let mut bullets: Vec<Shape> = vec![];
+    let mut enemy_bullets: Vec<Shape> = vec![];
     let mut circle = Shape {
         size: BALL_RADIUS * 2.0,
         speed: MOVEMENT_SPEED,
@@ -414,11 +438,20 @@ async fn main() -> Result<(), macroquad::Error> {
         16,
         &[
             Animation {
-                name: "bullet".to_string(),
-                row: 0,
+                name: "bolt".to_string(),
+                row: 1,
                 frames: 2,
                 fps: 12,
             },
+        ],
+        true,
+    );
+    bullet_sprite.set_animation(0);
+
+    let mut enemy_bullet_sprite = AnimatedSprite::new(
+        16,
+        16,
+        &[
             Animation {
                 name: "bolt".to_string(),
                 row: 1,
@@ -428,7 +461,7 @@ async fn main() -> Result<(), macroquad::Error> {
         ],
         true,
     );
-    bullet_sprite.set_animation(1);
+    enemy_bullet_sprite.set_animation(0);
 
     let mut enemy_small_sprite = AnimatedSprite::new(
         17,
@@ -479,7 +512,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     |ui| {
                         ui.label(vec2(90.0, -34.0), "Main menu");
                         if ui.button(vec2(66.0, 25.0), "Play") {
-                            squares.clear();
+                            enemies.clear();
                             bullets.clear();
                             explosions.clear();
                             circle.x = screen_width() / 2.0;
@@ -562,30 +595,36 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 if rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0);
-                    squares.push(Shape {
-                        size,
-                        speed: rand::gen_range(50.0, 150.0),
-                        x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
-                        y: -size,
-                        color: *ENEMY_COLORS.choose().unwrap(),
-                        collided: false,
+                    enemies.push(Enemy {
+                        bullet_count: 0,
+                        shape: Shape {
+                            size,
+                            speed: rand::gen_range(50.0, 150.0),
+                            x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
+                            y: -size,
+                            color: *ENEMY_COLORS.choose().unwrap(),
+                            collided: false,
+                        },
                     });
                 }
 
-                for square in &mut squares {
-                    square.y += square.speed * delta_time;
+                for enemy in &mut enemies {
+                    enemy.shape.y += enemy.shape.speed * delta_time;
                 }
                 for bullet in &mut bullets {
                     bullet.y -= bullet.speed * delta_time;
                 }
+                for bullet in &mut enemy_bullets {
+                    bullet.y += bullet.speed * delta_time;
+                }    
 
                 ship_sprite.update();
                 bullet_sprite.update();
                 enemy_small_sprite.update();
 
-                if squares
+                if enemies
                     .iter()
-                    .any(|square| square.collides_with_circle(&circle))
+                    .any(|enemy| enemy.shape.collides_with_circle(&circle))
                 {
                     if score == high_score {
                         fs::write("highscore.dat", high_score.to_string()).ok();
@@ -593,19 +632,19 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::GameOver;
                 }
 
-                for square in squares.iter_mut() {
+                for enemy in enemies.iter_mut() {
                     for bullet in bullets.iter_mut() {
-                        if bullet.collides_with(square) {
+                        if bullet.collides_with(&enemy.shape) {
                             bullet.collided = true;
-                            square.collided = true;
-                            score += square.size.round() as u32;
+                            enemy.shape.collided = true;
+                            score += enemy.shape.size.round() as u32;
                             if score > high_score {
                                 high_score_beaten = true;
                                 high_score = score;
                             }
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: square.size.round() as u32 * 2,
+                                    amount: enemy.shape.size.round() as u32 * 2,
                                     texture: Some(resources.explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
@@ -614,23 +653,47 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
+                    if enemy.shape.x > circle.x && enemy.shape.x < circle.x + circle.size && enemy.bullet_count < 1 {
+                        enemy_bullets.push(Shape {
+                            x: enemy.shape.x,
+                            y: enemy.shape.y + enemy.shape.size / 2.0,
+                            speed: enemy.shape.speed * 3.0,
+                            color: RED,
+                            size: 32.0,
+                            collided: false,
+                        });
+                        enemy.bullet_count += 1;
+                    }
                 }
 
-                squares.retain(|square| square.y < screen_width() + square.size);
+                enemy_bullets.retain(|bullet| {
+                    let should_keep = bullet.y < screen_height() + bullet.size;
+                    // if !should_keep {
+                    //     // Find the enemy that fired this bullet and decrement their bullet_count
+                    //     if let Some(enemy) = enemies.iter_mut().find(|enemy| enemy.bullets.contains(bullet)) {
+                    //         enemy.bullet_count -= 1;
+                    //     }
+                    // }
+                    should_keep
+                });
+    
+                enemies.retain(|enemy| enemy.shape.y < screen_width() + enemy.shape.size);
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
-                squares.retain(|square| !square.collided);
+                enemies.retain(|enemy| !enemy.shape.collided);
                 bullets.retain(|bullet| !bullet.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 draw_game_objects(
-                    &squares,
+                    &enemies,
                     &bullets,
+                    &enemy_bullets,
                     &circle,
                     &mut explosions,
                     score,
                     high_score,
                     high_score_beaten,
                     &bullet_sprite,
+                    &enemy_bullet_sprite,
                     &ship_sprite,
                     &enemy_small_sprite,
                     &resources,
@@ -649,14 +712,16 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::Playing;
                 }
                 draw_game_objects(
-                    &squares,
+                    &enemies,
                     &bullets,
+                    &enemy_bullets,
                     &circle,
                     &mut explosions,
                     score,
                     high_score,
                     high_score_beaten,
                     &bullet_sprite,
+                    &enemy_bullet_sprite,
                     &ship_sprite,
                     &enemy_small_sprite,
                     &resources,
@@ -678,14 +743,16 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::MainMenu;
                 }
                 draw_game_objects(
-                    &squares,
+                    &enemies,
                     &bullets,
+                    &enemy_bullets,
                     &circle,
                     &mut explosions,
                     score,
                     high_score,
                     high_score_beaten,
                     &bullet_sprite,
+                    &enemy_bullet_sprite,
                     &ship_sprite,
                     &enemy_small_sprite,
                     &resources,
