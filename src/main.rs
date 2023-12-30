@@ -515,6 +515,7 @@ async fn main() -> Result<(), macroquad::Error> {
                         if ui.button(vec2(66.0, 25.0), "Play") {
                             enemies.clear();
                             bullets.clear();
+                            enemy_bullets.clear();
                             explosions.clear();
                             circle.x = screen_width() / 2.0;
                             circle.y = screen_height() / 2.0;
