@@ -675,6 +675,15 @@ async fn main() -> Result<(), macroquad::Error> {
                     }
                 }
 
+                for bullet in enemy_bullets.iter_mut() {
+                    if bullet.shape.collides_with_circle(&circle) {
+                        if score == high_score {
+                            fs::write("highscore.dat", high_score.to_string()).ok();
+                        }
+                        game_state = GameState::GameOver;
+                    }
+                }
+
                 enemy_bullets.retain(|bullet| {
                     let should_keep = bullet.shape.y < screen_height() + bullet.shape.size;
                     if !should_keep {
