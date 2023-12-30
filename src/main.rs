@@ -52,18 +52,10 @@ struct Shape {
     speed: f32,
     x: f32,
     y: f32,
+    w: f32,
+    h: f32,
     color: Color,
     collided: bool,
-}
-
-struct Enemy {
-    id: usize,
-    shape: Shape,
-    bullet_count: usize,
-}
-struct EnemyBullet {
-    enemy_id: usize,
-    shape: Shape,
 }
 
 impl Shape {
@@ -81,10 +73,20 @@ impl Shape {
         Rect {
             x: self.x - self.size / 2.0,
             y: self.y - self.size / 2.0,
-            w: self.size,
-            h: self.size,
+            w: self.w,
+            h: self.h,
         }
     }
+}
+
+struct Enemy {
+    id: usize,
+    shape: Shape,
+    bullet_count: usize,
+}
+struct EnemyBullet {
+    enemy_id: usize,
+    shape: Shape,
 }
 
 enum GameState {
@@ -355,14 +357,6 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut next_enemy_id = 0;
     let mut bullets: Vec<Shape> = vec![];
     let mut enemy_bullets: Vec<EnemyBullet> = vec![];
-    let mut circle = Shape {
-        size: BALL_RADIUS * 2.0,
-        speed: MOVEMENT_SPEED,
-        x: screen_width() / 2.0,
-        y: screen_height() / 2.0,
-        color: GOLD,
-        collided: false,
-    };
 
     let mut direction_modifier: f32 = 0.0;
     let render_target = render_target(320, 150);
@@ -437,6 +431,21 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut left_direction_time = get_time();
     let mut right_direction_time = get_time();
+
+    let circle_size = BALL_RADIUS * 2.0;
+    let ship_sprite_w = ship_sprite.frame().source_rect.w;
+    let ship_sprite_h = ship_sprite.frame().source_rect.h;
+    let mut circle = Shape {
+        size: circle_size,
+        speed: MOVEMENT_SPEED,
+        x: screen_width() / 2.0,
+        y: screen_height() / 2.0,
+        w: ship_sprite_w * circle_size / ship_sprite_w,
+        h: ship_sprite_h * circle_size / ship_sprite_h,
+        color: GOLD,
+        collided: false,
+    };
+
 
     let mut bullet_sprite = AnimatedSprite::new(
         16,
@@ -584,12 +593,19 @@ async fn main() -> Result<(), macroquad::Error> {
                     && get_time() - last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND
                 {
                     last_bullet_time = get_time();
+                    let size = 32.0;
+                    let bullet_sprite_w = bullet_sprite.frame().source_rect.w;
+                    let bullet_sprite_h = bullet_sprite.frame().source_rect.h;
+                    let w = bullet_sprite_w * size / bullet_sprite_w;
+                    let h = bullet_sprite_h * size / bullet_sprite_h;
                     bullets.push(Shape {
                         x: circle.x,
                         y: circle.y - 24.0,
+                        w,
+                        h,
                         speed: circle.speed * 2.0,
                         color: GOLD,
-                        size: 32.0,
+                        size,
                         collided: false,
                     });
                     play_sound_once(&resources.sound_laser);
@@ -597,6 +613,10 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 if rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0);
+                    let ship_sprite_w = enemy_small_sprite.frame().source_rect.w;
+                    let ship_sprite_h = enemy_small_sprite.frame().source_rect.h;
+                    let w = ship_sprite_w * size / ship_sprite_w;
+                    let h = ship_sprite_h * size / ship_sprite_h;
                     enemies.push(Enemy {
                         id: next_enemy_id,
                         bullet_count: 0,
@@ -605,6 +625,8 @@ async fn main() -> Result<(), macroquad::Error> {
                             speed: rand::gen_range(50.0, 150.0),
                             x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
                             y: -size,
+                            w,
+                            h,
                             color: *ENEMY_COLORS.choose().unwrap(),
                             collided: false,
                         },
@@ -661,14 +683,21 @@ async fn main() -> Result<(), macroquad::Error> {
                         && enemy.shape.x < circle.x + circle.size
                         && enemy.bullet_count < 1
                     {
+                        let size = 16.0;
+                        let enemy_bullet_sprite_w = enemy_bullet_sprite.frame().source_rect.w;
+                        let enemy_bullet_sprite_h = enemy_bullet_sprite.frame().source_rect.h;
+                        let w = enemy_bullet_sprite_w * size / enemy_bullet_sprite_w;
+                        let h = enemy_bullet_sprite_h * size / enemy_bullet_sprite_h;    
                         enemy_bullets.push(EnemyBullet {
                             enemy_id: enemy.id,
                             shape: Shape {
                                 x: enemy.shape.x,
                                 y: enemy.shape.y + enemy.shape.size / 2.0,
+                                w,
+                                h,
                                 speed: enemy.shape.speed * 3.0,
                                 color: RED,
-                                size: 32.0,
+                                size,
                                 collided: false,
                             },
                         });
@@ -677,7 +706,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 for bullet in enemy_bullets.iter_mut() {
-                    if bullet.shape.collides_with_circle(&circle) {
+                    if bullet.shape.collides_with(&circle) {
                         if score == high_score {
                             fs::write("highscore.dat", high_score.to_string()).ok();
                         }
