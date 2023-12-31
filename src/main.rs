@@ -2,7 +2,6 @@
 extern crate lazy_static;
 
 use std::f32::consts::PI;
-use std::fs;
 
 use macroquad::audio::{
     load_sound, play_sound, play_sound_once, set_sound_volume, stop_sound, PlaySoundParams, Sound,
@@ -39,6 +38,16 @@ void main() {
     iTime = _Time.x;
 }
 ";
+
+fn save_high_score(score: u32) {
+    let storage = &mut quad_storage::STORAGE.lock().unwrap();
+    storage.set("highscore", &score.to_string());
+}
+
+fn load_high_score() -> u32 {
+    let storage = &mut quad_storage::STORAGE.lock().unwrap();
+    storage.get("highscore").unwrap_or("0".to_string()).parse::<u32>().unwrap()
+}
 
 lazy_static! {
     static ref ENEMY_COLORS: Vec<Color> = vec![
@@ -347,9 +356,7 @@ async fn main() -> Result<(), macroquad::Error> {
     rand::srand(miniquad::date::now() as u64);
 
     let mut score: u32 = 0;
-    let mut high_score: u32 = fs::read_to_string("highscore.dat")
-        .map_or(Ok(0), |i| i.parse::<u32>())
-        .unwrap_or(0);
+    let mut high_score: u32 = load_high_score();
     let mut high_score_beaten = false;
 
     let mut last_bullet_time = get_time();
@@ -653,7 +660,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     .any(|enemy| enemy.shape.collides_with_circle(&circle))
                 {
                     if score == high_score {
-                        fs::write("highscore.dat", high_score.to_string()).ok();
+                        save_high_score(score);
                     }
                     game_state = GameState::GameOver;
                 }
@@ -708,7 +715,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 for bullet in enemy_bullets.iter_mut() {
                     if bullet.shape.collides_with(&circle) {
                         if score == high_score {
-                            fs::write("highscore.dat", high_score.to_string()).ok();
+                            save_high_score(score);
                         }
                         game_state = GameState::GameOver;
                     }

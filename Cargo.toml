@@ -10,3 +10,4 @@ macroquad = { git = "https://github.com/not-fl3/macroquad.git", features = ["aud
 lazy_static = "1.4"
 notify = "6.1.1"
 macroquad-particles = { git = "https://github.com/not-fl3/macroquad.git" }
+quad-storage = "0.1.3"

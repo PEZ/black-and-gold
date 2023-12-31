@@ -26,7 +26,8 @@ jobs:
           mkdir -p ./deploy/assets
           cp ./target/wasm32-unknown-unknown/release/mitt-spel.wasm ./deploy/
           cp index.html ./deploy/
-          cp -r ./assets/* ./deploy/assets
+          cp -r ./assets ./deploy/
+          cp -r ./js ./deploy/
 
       - name: List Deployment Files
         run: ls -l ./deploy
