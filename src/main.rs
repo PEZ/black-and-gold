@@ -358,8 +358,8 @@ fn draw_score(score: u32, high_score: u32, high_score_beaten: bool) {
 async fn main() -> Result<(), macroquad::Error> {
     rand::srand(miniquad::date::now() as u64);
 
-    let base_width = 700.0;
-    let base_height = 700.0;
+    let base_width = 750.0;
+    let base_enemies = 30;
 
     let mut score: u32 = 0;
     let mut high_score: u32 = load_high_score();
@@ -506,8 +506,9 @@ async fn main() -> Result<(), macroquad::Error> {
         let screen_width = screen_width();
         let screen_height = screen_height();
         let scale_x = screen_width / base_width;
-        let scale_y = screen_height / base_height;
-        let scale = scale_x.min(scale_y);    
+        let scale = scale_x;    
+
+        let max_enemies = (base_enemies as f32 * scale).floor() as usize;
 
         material.set_uniform("iResolution", (screen_width, screen_height));
         material.set_uniform("direction_modifier", direction_modifier);
@@ -630,7 +631,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     play_sound_once(&resources.sound_laser);
                 }
 
-                if rand::gen_range(0, 99) >= 95 {
+                if enemies.len() < max_enemies && rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0) * scale;
                     let ship_sprite_w = enemy_small_sprite.frame().source_rect.w;
                     let ship_sprite_h = enemy_small_sprite.frame().source_rect.h;
