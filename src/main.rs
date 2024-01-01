@@ -623,6 +623,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 if rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0);
+                    let size = screen_width() / 640.0 * size;
                     let ship_sprite_w = enemy_small_sprite.frame().source_rect.w;
                     let ship_sprite_h = enemy_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
