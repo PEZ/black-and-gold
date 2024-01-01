@@ -358,6 +358,9 @@ fn draw_score(score: u32, high_score: u32, high_score_beaten: bool) {
 async fn main() -> Result<(), macroquad::Error> {
     rand::srand(miniquad::date::now() as u64);
 
+    let base_width = 700.0;
+    let base_height = 700.0;
+
     let mut score: u32 = 0;
     let mut high_score: u32 = load_high_score();
     let mut high_score_beaten = false;
@@ -500,7 +503,13 @@ async fn main() -> Result<(), macroquad::Error> {
     loop {
         clear_background(BLACK);
 
-        material.set_uniform("iResolution", (screen_width(), screen_height()));
+        let screen_width = screen_width();
+        let screen_height = screen_height();
+        let scale_x = screen_width / base_width;
+        let scale_y = screen_height / base_height;
+        let scale = scale_x.min(scale_y);    
+
+        material.set_uniform("iResolution", (screen_width, screen_height));
         material.set_uniform("direction_modifier", direction_modifier);
 
         gl_use_material(&material);
@@ -510,7 +519,7 @@ async fn main() -> Result<(), macroquad::Error> {
             0.,
             WHITE,
             DrawTextureParams {
-                dest_size: Some(vec2(screen_width(), screen_height())),
+                dest_size: Some(vec2(screen_width, screen_height)),
                 ..Default::default()
             },
         );
@@ -526,8 +535,8 @@ async fn main() -> Result<(), macroquad::Error> {
                 root_ui().window(
                     hash!(),
                     vec2(
-                        screen_width() / 2.0 - window_size.x / 2.0,
-                        screen_height() / 2.0 - window_size.y / 2.0,
+                        screen_width / 2.0 - window_size.x / 2.0,
+                        screen_height / 2.0 - window_size.y / 2.0,
                     ),
                     window_size,
                     |ui| {
@@ -537,8 +546,8 @@ async fn main() -> Result<(), macroquad::Error> {
                             bullets.clear();
                             enemy_bullets.clear();
                             explosions.clear();
-                            circle.x = screen_width() / 2.0;
-                            circle.y = screen_height() / 2.0;
+                            circle.x = screen_width / 2.0;
+                            circle.y = screen_height / 2.0;
                             game_state = GameState::Playing;
                         }
                         if ui.button(vec2(66.0, 125.0), "Exit") {
@@ -592,11 +601,11 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 circle.x = circle
                     .x
-                    .min(screen_width() - BALL_RADIUS)
+                    .min(screen_width - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
                 circle.y = circle
                     .y
-                    .min(screen_height() - BALL_RADIUS)
+                    .min(screen_height - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
 
                 if is_key_pressed(KeyCode::Space)
@@ -622,8 +631,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 if rand::gen_range(0, 99) >= 95 {
-                    let size = rand::gen_range(16.0, 64.0);
-                    let size = screen_width() / 640.0 * size;
+                    let size = rand::gen_range(16.0, 64.0) * scale;
                     let ship_sprite_w = enemy_small_sprite.frame().source_rect.w;
                     let ship_sprite_h = enemy_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
@@ -634,7 +642,7 @@ async fn main() -> Result<(), macroquad::Error> {
                         shape: Shape {
                             size,
                             speed: rand::gen_range(50.0, 150.0),
-                            x: rand::gen_range(size / 2.0, screen_width() - size / 2.0),
+                            x: rand::gen_range(size / 2.0, screen_width - size / 2.0),
                             y: -size,
                             w,
                             h,
@@ -726,7 +734,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 enemy_bullets.retain(|bullet| {
-                    let should_keep = bullet.shape.y < screen_height() + bullet.shape.size;
+                    let should_keep = bullet.shape.y < screen_height + bullet.shape.size;
                     if !should_keep {
                         if let Some(enemy) =
                             enemies.iter_mut().find(|enemy| enemy.id == bullet.enemy_id)
@@ -737,7 +745,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     should_keep
                 });
 
-                enemies.retain(|enemy| enemy.shape.y < screen_height() + enemy.shape.size);
+                enemies.retain(|enemy| enemy.shape.y < screen_height + enemy.shape.size);
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 enemies.retain(|enemy| !enemy.shape.collided);
                 bullets.retain(|bullet| !bullet.collided);
@@ -786,8 +794,8 @@ async fn main() -> Result<(), macroquad::Error> {
                 let text_dimensions = measure_text(text, None, 32, 1.0);
                 draw_text(
                     text,
-                    screen_width() / 2.0 - text_dimensions.width / 2.0,
-                    screen_height() / 2.0,
+                    screen_width / 2.0 - text_dimensions.width / 2.0,
+                    screen_height / 2.0,
                     32.0,
                     GOLD,
                 );
@@ -814,9 +822,9 @@ async fn main() -> Result<(), macroquad::Error> {
                 let game_over_text = "GAME OVER!";
                 let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
 
-                let text_x = (screen_width() - text_dimensions.width) / 2.0;
+                let text_x = (screen_width - text_dimensions.width) / 2.0;
                 let text_y =
-                    screen_height() / 2.0 - text_dimensions.offset_y + text_dimensions.height;
+                    screen_height / 2.0 - text_dimensions.offset_y + text_dimensions.height;
 
                 draw_text(game_over_text, text_x, text_y, 32.0, GOLD);
                 draw_game_title();
