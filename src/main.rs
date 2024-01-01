@@ -609,8 +609,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     .min(screen_height - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
 
-                if is_key_pressed(KeyCode::Space)
-                    && get_time() - last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND
+                if get_time() - last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND
                 {
                     last_bullet_time = get_time();
                     let size = 32.0;
