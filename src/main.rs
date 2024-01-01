@@ -16,7 +16,7 @@ use macroquad::ui::{hash, root_ui, Skin};
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
 
 const GAME_TITLE: &str = "¡AFUERA!";
-const MOVEMENT_SPEED: f32 = 200.0;
+const MOVEMENT_SPEED: f32 = 400.0;
 const STARFIELD_SPEED: f32 = 0.01;
 const BALL_RADIUS: f32 = 16.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
@@ -506,7 +506,7 @@ async fn main() -> Result<(), macroquad::Error> {
         let screen_width = screen_width();
         let screen_height = screen_height();
         let scale_x = screen_width / base_width;
-        let scale = scale_x;    
+        let scale = scale_x;
 
         let max_enemies = (base_enemies as f32 * scale).floor() as usize;
 
@@ -565,16 +565,21 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::Paused;
                 }
                 let delta_time = get_frame_time();
-                let my_movement = delta_time * MOVEMENT_SPEED;
-                let star_movement = delta_time * STARFIELD_SPEED;
+                let my_movement_speed = delta_time * MOVEMENT_SPEED;
+                let star_movement_speed = delta_time * STARFIELD_SPEED;
+
+                let (mouse_x, mouse_y) = mouse_position();
+
+                let dir_x = mouse_x - circle.x;
+                let dir_y = mouse_y - circle.y;
 
                 ship_sprite.set_animation(0);
                 if is_key_pressed(KeyCode::Left) {
                     left_direction_time = get_time();
                 }
-                if is_key_down(KeyCode::Left) {
-                    circle.x -= my_movement;
-                    direction_modifier -= star_movement;
+                if dir_x < 0.0 {
+                    circle.x -= my_movement_speed;
+                    direction_modifier -= star_movement_speed;
                     ship_sprite.set_animation(if get_time() < left_direction_time + 0.5 {
                         1
                     } else {
@@ -584,20 +589,20 @@ async fn main() -> Result<(), macroquad::Error> {
                 if is_key_pressed(KeyCode::Right) {
                     right_direction_time = get_time();
                 }
-                if is_key_down(KeyCode::Right) {
-                    circle.x += my_movement;
-                    direction_modifier += star_movement;
+                if dir_x > 0.0 {
+                    circle.x += my_movement_speed;
+                    direction_modifier += star_movement_speed;
                     ship_sprite.set_animation(if get_time() < right_direction_time + 0.5 {
                         3
                     } else {
                         4
                     });
                 }
-                if is_key_down(KeyCode::Down) {
-                    circle.y += my_movement;
+                if dir_y > 0.0 {
+                    circle.y += my_movement_speed;
                 }
-                if is_key_down(KeyCode::Up) {
-                    circle.y -= my_movement;
+                if dir_y < 0.0 {
+                    circle.y -= my_movement_speed;
                 }
 
                 circle.x = circle
@@ -609,8 +614,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     .min(screen_height - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
 
-                if get_time() - last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND
-                {
+                if get_time() - last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND {
                     last_bullet_time = get_time();
                     let size = 32.0;
                     let bullet_sprite_w = bullet_sprite.frame().source_rect.w;
