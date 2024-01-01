@@ -46,7 +46,11 @@ fn save_high_score(score: u32) {
 
 fn load_high_score() -> u32 {
     let storage = &mut quad_storage::STORAGE.lock().unwrap();
-    storage.get("highscore").unwrap_or("0".to_string()).parse::<u32>().unwrap()
+    storage
+        .get("highscore")
+        .unwrap_or("0".to_string())
+        .parse::<u32>()
+        .unwrap()
 }
 
 lazy_static! {
@@ -250,9 +254,6 @@ fn draw_game_objects(
     enemy_bullets: &[EnemyBullet],
     circle: &Shape,
     explosions: &mut [(Emitter, Vec2)],
-    score: u32,
-    high_score: u32,
-    high_score_beaten: bool,
     bullet_sprite: &AnimatedSprite,
     enemy_bullet_sprite: &AnimatedSprite,
     ship_sprite: &AnimatedSprite,
@@ -321,7 +322,9 @@ fn draw_game_objects(
     for (explosion, coords) in explosions.iter_mut() {
         explosion.draw(*coords);
     }
+}
 
+fn draw_score(score: u32, high_score: u32, high_score_beaten: bool) {
     draw_text(format!("Score: {}", score).as_str(), 10.0, 35.0, 25.0, GOLD);
     let high_score_text = format!("High score: {}", high_score);
     let high_score_beaten_text = if high_score_beaten {
@@ -453,7 +456,6 @@ async fn main() -> Result<(), macroquad::Error> {
         collided: false,
     };
 
-
     let mut bullet_sprite = AnimatedSprite::new(
         16,
         16,
@@ -519,6 +521,8 @@ async fn main() -> Result<(), macroquad::Error> {
         match game_state {
             GameState::MainMenu => {
                 set_sound_volume(&resources.theme_music, 0.2);
+                score = 0;
+                high_score_beaten = false;
                 root_ui().window(
                     hash!(),
                     vec2(
@@ -535,16 +539,15 @@ async fn main() -> Result<(), macroquad::Error> {
                             explosions.clear();
                             circle.x = screen_width() / 2.0;
                             circle.y = screen_height() / 2.0;
-                            score = 0;
                             game_state = GameState::Playing;
                         }
                         if ui.button(vec2(66.0, 125.0), "Exit") {
-                            //std::process::exit(0);
                             exit_game = true;
                         }
                     },
                 );
                 draw_game_title();
+                draw_score(score, high_score, high_score_beaten);
             }
             GameState::Playing => {
                 set_sound_volume(&resources.theme_music, 1.0);
@@ -686,15 +689,15 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
-                    if enemy.shape.x > circle.x
-                        && enemy.shape.x < circle.x + circle.size
+                    if circle.x > enemy.shape.x - enemy.shape.w / 2.0
+                        && circle.x < enemy.shape.x + enemy.shape.w / 2.0
                         && enemy.bullet_count < 1
                     {
                         let size = 16.0;
                         let enemy_bullet_sprite_w = enemy_bullet_sprite.frame().source_rect.w;
                         let enemy_bullet_sprite_h = enemy_bullet_sprite.frame().source_rect.h;
                         let w = enemy_bullet_sprite_w * size / enemy_bullet_sprite_w;
-                        let h = enemy_bullet_sprite_h * size / enemy_bullet_sprite_h;    
+                        let h = enemy_bullet_sprite_h * size / enemy_bullet_sprite_h;
                         enemy_bullets.push(EnemyBullet {
                             enemy_id: enemy.id,
                             shape: Shape {
@@ -745,15 +748,13 @@ async fn main() -> Result<(), macroquad::Error> {
                     &enemy_bullets,
                     &circle,
                     &mut explosions,
-                    score,
-                    high_score,
-                    high_score_beaten,
                     &bullet_sprite,
                     &enemy_bullet_sprite,
                     &ship_sprite,
                     &enemy_small_sprite,
                     &resources,
                 );
+                draw_score(score, high_score, high_score_beaten);
             }
             GameState::Paused => {
                 stop_sound(&resources.theme_music);
@@ -773,15 +774,13 @@ async fn main() -> Result<(), macroquad::Error> {
                     &enemy_bullets,
                     &circle,
                     &mut explosions,
-                    score,
-                    high_score,
-                    high_score_beaten,
                     &bullet_sprite,
                     &enemy_bullet_sprite,
                     &ship_sprite,
                     &enemy_small_sprite,
                     &resources,
                 );
+                draw_score(score, high_score, high_score_beaten);
                 let text = "Paused";
                 let text_dimensions = measure_text(text, None, 32, 1.0);
                 draw_text(
@@ -804,15 +803,13 @@ async fn main() -> Result<(), macroquad::Error> {
                     &enemy_bullets,
                     &circle,
                     &mut explosions,
-                    score,
-                    high_score,
-                    high_score_beaten,
                     &bullet_sprite,
                     &enemy_bullet_sprite,
                     &ship_sprite,
                     &enemy_small_sprite,
                     &resources,
                 );
+                draw_score(score, high_score, high_score_beaten);
                 let game_over_text = "GAME OVER!";
                 let text_dimensions = measure_text(game_over_text, None, 32, 1.0);
 
