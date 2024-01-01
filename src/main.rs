@@ -737,7 +737,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     should_keep
                 });
 
-                enemies.retain(|enemy| enemy.shape.y < screen_width() + enemy.shape.size);
+                enemies.retain(|enemy| enemy.shape.y < screen_height() + enemy.shape.size);
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 enemies.retain(|enemy| !enemy.shape.collided);
                 bullets.retain(|bullet| !bullet.collided);
