@@ -578,7 +578,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     left_direction_time = get_time();
                 }
                 if dir_x < 0.0 {
-                    circle.x -= my_movement_speed;
+                    circle.x -= my_movement_speed.min(dir_x.abs());
                     direction_modifier -= star_movement_speed;
                     ship_sprite.set_animation(if get_time() < left_direction_time + 0.5 {
                         1
@@ -590,7 +590,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     right_direction_time = get_time();
                 }
                 if dir_x > 0.0 {
-                    circle.x += my_movement_speed;
+                    circle.x += my_movement_speed.min(dir_x);
                     direction_modifier += star_movement_speed;
                     ship_sprite.set_animation(if get_time() < right_direction_time + 0.5 {
                         3
@@ -599,10 +599,10 @@ async fn main() -> Result<(), macroquad::Error> {
                     });
                 }
                 if dir_y > 0.0 {
-                    circle.y += my_movement_speed;
+                    circle.y += my_movement_speed.min(dir_y);
                 }
                 if dir_y < 0.0 {
-                    circle.y -= my_movement_speed;
+                    circle.y -= my_movement_speed.min(dir_y.abs());
                 }
 
                 circle.x = circle
