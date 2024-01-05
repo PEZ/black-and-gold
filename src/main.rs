@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate lazy_static;
 
-#[cfg(target_os = "ios")]
 mod ios;
 
 use std::f32::consts::PI;
@@ -330,7 +329,12 @@ fn draw_game_objects(
 }
 
 fn draw_score(score: u32, high_score: u32, high_score_beaten: bool) {
-    draw_text(format!("Score: {}", score).as_str(), 10.0, 35.0, 25.0, GOLD);
+    #[cfg(target_os = "ios")]
+    info!("BOOM! safe area insets: {}", ios::get_safe_area_insets());
+    let insets = ios::get_safe_area_insets();
+    let top = 35.0 + insets.top as f32;
+
+    draw_text(format!("Score: {}", score).as_str(), 10.0, top, 25.0, GOLD);
     let high_score_text = format!("High score: {}", high_score);
     let high_score_beaten_text = if high_score_beaten {
         "New high score!"
@@ -342,7 +346,7 @@ fn draw_score(score: u32, high_score: u32, high_score_beaten: bool) {
     draw_text(
         high_score_text.as_str(),
         screen_width() - text_dimensions.width - 10.0,
-        35.0,
+        top,
         25.0,
         GOLD,
     );
@@ -352,7 +356,7 @@ fn draw_score(score: u32, high_score: u32, high_score_beaten: bool) {
         draw_text(
             high_score_beaten_text,
             screen_width() - text_dimensions.width - 10.0,
-            35.0 + text_dimensions.height + text_dimensions.offset_y,
+            top + text_dimensions.height + text_dimensions.offset_y,
             25.0,
             oscillating_alpha(GOLD, 3.0),
         );
@@ -365,11 +369,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
     simple_logger::setup_logger();
 
-    log::info!("BOOM!");
-    
-    #[cfg(target_os = "ios")]
-    info!("BOOM! safe area insets: {:?}", ios::get_safe_area_insets());
-
+    log::info!("¡AFUERA!");
 
     let base_width = 750.0;
     let base_enemies = 30;
