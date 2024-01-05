@@ -9,6 +9,7 @@ use objc::runtime::Object;
 use objc::{class, msg_send, sel, sel_impl};
 
 #[repr(C)]
+#[cfg(target_os = "ios")]
 struct UIEdgeInsets {
     top: f64,
     left: f64,
