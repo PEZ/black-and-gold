@@ -584,7 +584,6 @@ dependencies = [
 [[package]]
 name = "quad-storage"
 version = "0.1.3"
-source = "git+https://github.com/PEZ/quad-storage.git?branch=ios2#a2b88e0ca4c1731132181431598463e71a063206"
 dependencies = [
  "lazy_static",
  "nanoserde",
@@ -595,7 +594,6 @@ dependencies = [
 [[package]]
 name = "quad-storage-sys"
 version = "0.1.0"
-source = "git+https://github.com/PEZ/quad-storage.git?branch=ios2#a2b88e0ca4c1731132181431598463e71a063206"
 dependencies = [
  "sapp-jsutils",
 ]
