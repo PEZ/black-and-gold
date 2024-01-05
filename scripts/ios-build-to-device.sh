@@ -15,4 +15,4 @@ cargo build --target aarch64-apple-ios --release
 cp -r assets "ios/$APP_NAME"
 cp target/aarch64-apple-ios/release/$BINARY_NAME "ios/$APP_NAME/"
 codesign --force --timestamp=none --sign "$SIGNING_IDENTITY" --entitlements ios/entitlements.xml "ios/$APP_NAME"
-ios-deploy -dr -i "$DEVICE_ID" -b "ios/$APP_NAME"
+ios-deploy -d -i "$DEVICE_ID" -b "ios/$APP_NAME"
