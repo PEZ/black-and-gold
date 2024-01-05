@@ -14,3 +14,4 @@ macroquad-particles = { git = "https://github.com/not-fl3/macroquad.git" }
 quad-storage = { git = "https://github.com/PEZ/quad-storage.git", branch = "ios" }
 log = {version = "0.4.20", features = ["std"] }
 oslog = "0.2.0"
+objc = "0.2.7"

@@ -408,6 +408,7 @@ dependencies = [
  "macroquad",
  "macroquad-particles",
  "notify",
+ "objc",
  "oslog",
  "quad-storage",
 ]
