@@ -6,7 +6,7 @@ mod ios;
 use std::f32::consts::PI;
 
 use macroquad::audio::{
-    load_sound, play_sound, play_sound_once, set_sound_volume, stop_sound, PlaySoundParams, Sound,
+    load_sound, play_sound, play_sound_once, set_sound_volume, PlaySoundParams, Sound,
 };
 
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
@@ -584,7 +584,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 let my_movement_speed = delta_time * MOVEMENT_SPEED;
                 let star_movement_speed = delta_time * STARFIELD_SPEED;
 
-                if is_mouse_button_pressed(MouseButton::Left) {
+                if is_mouse_button_down(MouseButton::Left) {
                     has_valid_mouse_position = true;
                 }
 
@@ -810,18 +810,21 @@ async fn main() -> Result<(), macroquad::Error> {
                     &resources,
                 );
                 draw_score(score, high_score, high_score_beaten);
+                #[cfg(any(target_os = "ios", target_os = "android"))]
+                if is_mouse_button_released(MouseButton::Left) {
+                    game_state = GameState::Paused;
+                    next_frame().await;
+                }
             }
             GameState::Paused => {
-                stop_sound(&resources.theme_music);
-                if is_key_pressed(KeyCode::Space) {
-                    play_sound(
-                        &resources.theme_music,
-                        PlaySoundParams {
-                            looped: true,
-                            volume: 1.,
-                        },
-                    );
+                set_sound_volume(&resources.theme_music, 0.2);
+                if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Playing;
+                }
+                #[cfg(any(target_os = "ios", target_os = "android"))]
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    game_state = GameState::Playing;
+                    has_valid_mouse_position = true;
                 }
                 draw_game_objects(
                     &enemies,
@@ -849,7 +852,7 @@ async fn main() -> Result<(), macroquad::Error> {
             }
             GameState::GameOver => {
                 set_sound_volume(&resources.theme_music, 0.2);
-                if is_key_pressed(KeyCode::Space) || is_key_pressed(KeyCode::Escape) {
+                if is_key_pressed(KeyCode::Escape) || is_mouse_button_pressed(MouseButton::Left) {
                     game_state = GameState::MainMenu;
                 }
                 draw_game_objects(
