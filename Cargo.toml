@@ -11,7 +11,7 @@ lazy_static = "1.4"
 notify = "6.1.1"
 macroquad-particles = { git = "https://github.com/not-fl3/macroquad.git" }
 # quad-storage = { path = "../quad-storage" }
-quad-storage = { git = "https://github.com/PEZ/quad-storage.git", branch = "ios2" }
+quad-storage = { git = "https://github.com/PEZ/quad-storage.git", branch = "ios" }
 log = {version = "0.4.20", features = ["std"] }
 [target.'cfg(target_os = "ios")'.dependencies]
 oslog = "0.2.0"
