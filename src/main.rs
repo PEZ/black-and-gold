@@ -541,6 +541,8 @@ async fn main() -> Result<(), macroquad::Error> {
     root_ui().push_skin(&resources.ui_skin);
     let window_size = vec2(370.0, 320.0);
 
+    let mut has_valid_mouse_position = false;
+
     loop {
         clear_background(BLACK);
 
@@ -589,8 +591,9 @@ async fn main() -> Result<(), macroquad::Error> {
                             enemy_bullets.clear();
                             explosions.clear();
                             circle.x = screen_width / 2.0;
-                            circle.y = screen_height / 2.0;
+                            circle.y = screen_height - circle.size;
                             game_state = GameState::Playing;
+                            has_valid_mouse_position = false;
                         }
                         if ui.button(vec2(66.0, 125.0), "Exit") {
                             exit_game = true;
@@ -609,10 +612,37 @@ async fn main() -> Result<(), macroquad::Error> {
                 let my_movement_speed = delta_time * MOVEMENT_SPEED;
                 let star_movement_speed = delta_time * STARFIELD_SPEED;
 
-                let (mouse_x, mouse_y) = mouse_position();
+                #[cfg(target_os = "ios")]
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    has_valid_mouse_position = true;
+                }
+                #[cfg(target_os = "ios")]
+                let (mouse_x, mouse_y) = if has_valid_mouse_position {
+                    mouse_position()
+                } else {
+                    (circle.x, circle.y)
+                };
 
+                #[cfg(target_os = "ios")]
                 let dir_x = mouse_x - circle.x;
+                #[cfg(target_os = "ios")]
                 let dir_y = mouse_y - circle.y;
+                #[cfg(not(target_os = "ios"))]
+                let dir_x: f32 = if is_key_down(KeyCode::Left) {
+                    -MOVEMENT_SPEED
+                } else if is_key_down(KeyCode::Right) {
+                    MOVEMENT_SPEED
+                } else {
+                    0.0
+                };
+                #[cfg(not(target_os = "ios"))]
+                let dir_y: f32 = if is_key_down(KeyCode::Up) {
+                    -MOVEMENT_SPEED
+                } else if is_key_down(KeyCode::Down) {
+                    MOVEMENT_SPEED
+                } else {
+                    0.0
+                };
 
                 ship_sprite.set_animation(0);
                 if is_key_pressed(KeyCode::Left) {
