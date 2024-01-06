@@ -5,7 +5,7 @@ use macroquad::audio::{load_sound, Sound};
 use macroquad::ui::{root_ui, Skin};
 
 pub struct Resources {
-  pub ship_texture: Texture2D,
+  pub milei_texture: Texture2D,
   pub bullet_texture: Texture2D,
   pub explosion_texture: Texture2D,
   pub government_small_texture: Texture2D,
@@ -17,7 +17,7 @@ pub struct Resources {
 
 impl Resources {
   async fn new() -> Result<Resources, macroquad::Error> {
-      let ship_texture: Texture2D = load_texture("ship.png").await?;
+      let ship_texture: Texture2D = load_texture("milei.png").await?;
       ship_texture.set_filter(FilterMode::Nearest);
       let bullet_texture: Texture2D = load_texture("laser-bolts.png").await?;
       bullet_texture.set_filter(FilterMode::Nearest);
@@ -65,7 +65,7 @@ impl Resources {
       };
 
       Ok(Resources {
-          ship_texture,
+          milei_texture: ship_texture,
           bullet_texture,
           explosion_texture,
           government_small_texture,
