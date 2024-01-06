@@ -58,7 +58,7 @@ fn load_high_score() -> u32 {
 }
 
 lazy_static! {
-    static ref ENEMY_COLORS: Vec<Color> = vec![
+    static ref GOVERNMENT_COLORS: Vec<Color> = vec![
         BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY, GREEN,
         LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
     ];
@@ -96,13 +96,13 @@ impl Shape {
     }
 }
 
-struct Enemy {
+struct Government {
     id: usize,
     shape: Shape,
     bullet_count: usize,
 }
-struct EnemyBullet {
-    enemy_id: usize,
+struct GovernmentBullet {
+    government_id: usize,
     shape: Shape,
 }
 
@@ -155,34 +155,34 @@ fn particle_explosion() -> particles::EmitterConfig {
 }
 
 fn draw_game_objects(
-    enemies: &[Enemy],
+    enemies: &[Government],
     bullets: &[Shape],
-    enemy_bullets: &[EnemyBullet],
+    government_bullets: &[GovernmentBullet],
     circle: &Shape,
     explosions: &mut [(Emitter, Vec2)],
     bullet_sprite: &AnimatedSprite,
-    enemy_bullet_sprite: &AnimatedSprite,
+    government_bullet_sprite: &AnimatedSprite,
     ship_sprite: &AnimatedSprite,
-    enemy_small_sprite: &AnimatedSprite,
+    government_small_sprite: &AnimatedSprite,
     resources: &Resources,
 ) {
-    let enemy_frame: animation::AnimationFrame = enemy_small_sprite.frame();
-    for enemy in enemies {
+    let government_frame: animation::AnimationFrame = government_small_sprite.frame();
+    for government in enemies {
         draw_texture_ex(
-            &resources.enemy_small_texture,
-            enemy.shape.x - enemy.shape.size / 2.0,
-            enemy.shape.y - enemy.shape.size / 2.0,
+            &resources.government_small_texture,
+            government.shape.x - government.shape.size / 2.0,
+            government.shape.y - government.shape.size / 2.0,
             WHITE, // square.color,
             DrawTextureParams {
-                dest_size: Some(vec2(enemy.shape.size, enemy.shape.size)),
-                source: Some(enemy_frame.source_rect),
+                dest_size: Some(vec2(government.shape.size, government.shape.size)),
+                source: Some(government_frame.source_rect),
                 ..Default::default()
             },
         );
     }
 
-    let bullet_frame = enemy_bullet_sprite.frame();
-    for bullet in enemy_bullets {
+    let bullet_frame = government_bullet_sprite.frame();
+    for bullet in government_bullets {
         draw_texture_ex(
             &resources.bullet_texture,
             bullet.shape.x - bullet.shape.size / 2.0,
@@ -282,9 +282,9 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut last_bullet_time = get_time();
     let mut enemies = vec![];
-    let mut next_enemy_id = 0;
+    let mut next_government_id = 0;
     let mut bullets: Vec<Shape> = vec![];
-    let mut enemy_bullets: Vec<EnemyBullet> = vec![];
+    let mut government_bullets: Vec<GovernmentBullet> = vec![];
 
     let mut direction_modifier: f32 = 0.0;
     let render_target = render_target(320, 150);
@@ -387,7 +387,7 @@ async fn main() -> Result<(), macroquad::Error> {
     );
     bullet_sprite.set_animation(0);
 
-    let mut enemy_bullet_sprite = AnimatedSprite::new(
+    let mut government_bullet_sprite = AnimatedSprite::new(
         16,
         16,
         &[Animation {
@@ -398,13 +398,13 @@ async fn main() -> Result<(), macroquad::Error> {
         }],
         true,
     );
-    enemy_bullet_sprite.set_animation(0);
+    government_bullet_sprite.set_animation(0);
 
-    let mut enemy_small_sprite = AnimatedSprite::new(
+    let mut government_small_sprite = AnimatedSprite::new(
         17,
         16,
         &[Animation {
-            name: "enemy_small".to_string(),
+            name: "government_small".to_string(),
             row: 0,
             frames: 2,
             fps: 12,
@@ -464,7 +464,7 @@ async fn main() -> Result<(), macroquad::Error> {
                         if ui.button(vec2(66.0, 25.0), "Play") {
                             enemies.clear();
                             bullets.clear();
-                            enemy_bullets.clear();
+                            government_bullets.clear();
                             explosions.clear();
                             circle.x = screen_width / 2.0;
                             circle.y = screen_height - circle.size;
@@ -595,12 +595,12 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 if enemies.len() < max_enemies && rand::gen_range(0, 99) >= 95 {
                     let size = rand::gen_range(16.0, 64.0) * scale;
-                    let ship_sprite_w = enemy_small_sprite.frame().source_rect.w;
-                    let ship_sprite_h = enemy_small_sprite.frame().source_rect.h;
+                    let ship_sprite_w = government_small_sprite.frame().source_rect.w;
+                    let ship_sprite_h = government_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
                     let h = ship_sprite_h * size / ship_sprite_h;
-                    enemies.push(Enemy {
-                        id: next_enemy_id,
+                    enemies.push(Government {
+                        id: next_government_id,
                         bullet_count: 0,
                         shape: Shape {
                             size,
@@ -609,30 +609,30 @@ async fn main() -> Result<(), macroquad::Error> {
                             y: -size,
                             w,
                             h,
-                            color: *ENEMY_COLORS.choose().unwrap(),
+                            color: *GOVERNMENT_COLORS.choose().unwrap(),
                             collided: false,
                         },
                     });
-                    next_enemy_id += 1;
+                    next_government_id += 1;
                 }
 
-                for enemy in &mut enemies {
-                    enemy.shape.y += enemy.shape.speed * delta_time;
+                for government in &mut enemies {
+                    government.shape.y += government.shape.speed * delta_time;
                 }
                 for bullet in &mut bullets {
                     bullet.y -= bullet.speed * delta_time;
                 }
-                for bullet in &mut enemy_bullets {
+                for bullet in &mut government_bullets {
                     bullet.shape.y += bullet.shape.speed * delta_time;
                 }
 
                 ship_sprite.update();
                 bullet_sprite.update();
-                enemy_small_sprite.update();
+                government_small_sprite.update();
 
                 if enemies
                     .iter()
-                    .any(|enemy| enemy.shape.collides_with_circle(&circle))
+                    .any(|government| government.shape.collides_with_circle(&circle))
                 {
                     if score == high_score {
                         save_high_score(score);
@@ -640,19 +640,19 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::GameOver;
                 }
 
-                for enemy in enemies.iter_mut() {
+                for government in enemies.iter_mut() {
                     for bullet in bullets.iter_mut() {
-                        if bullet.collides_with(&enemy.shape) {
+                        if bullet.collides_with(&government.shape) {
                             bullet.collided = true;
-                            enemy.shape.collided = true;
-                            score += enemy.shape.size.round() as u32;
+                            government.shape.collided = true;
+                            score += government.shape.size.round() as u32;
                             if score > high_score {
                                 high_score_beaten = true;
                                 high_score = score;
                             }
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: enemy.shape.size.round() as u32 * 2,
+                                    amount: government.shape.size.round() as u32 * 2,
                                     texture: Some(resources.explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
@@ -661,33 +661,33 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
-                    if circle.x > enemy.shape.x - enemy.shape.w / 2.0
-                        && circle.x < enemy.shape.x + enemy.shape.w / 2.0
-                        && enemy.bullet_count < 1
+                    if circle.x > government.shape.x - government.shape.w / 2.0
+                        && circle.x < government.shape.x + government.shape.w / 2.0
+                        && government.bullet_count < 1
                     {
                         let size = 16.0;
-                        let enemy_bullet_sprite_w = enemy_bullet_sprite.frame().source_rect.w;
-                        let enemy_bullet_sprite_h = enemy_bullet_sprite.frame().source_rect.h;
-                        let w = enemy_bullet_sprite_w * size / enemy_bullet_sprite_w;
-                        let h = enemy_bullet_sprite_h * size / enemy_bullet_sprite_h;
-                        enemy_bullets.push(EnemyBullet {
-                            enemy_id: enemy.id,
+                        let government_bullet_sprite_w = government_bullet_sprite.frame().source_rect.w;
+                        let government_bullet_sprite_h = government_bullet_sprite.frame().source_rect.h;
+                        let w = government_bullet_sprite_w * size / government_bullet_sprite_w;
+                        let h = government_bullet_sprite_h * size / government_bullet_sprite_h;
+                        government_bullets.push(GovernmentBullet {
+                            government_id: government.id,
                             shape: Shape {
-                                x: enemy.shape.x,
-                                y: enemy.shape.y + enemy.shape.size / 2.0,
+                                x: government.shape.x,
+                                y: government.shape.y + government.shape.size / 2.0,
                                 w,
                                 h,
-                                speed: enemy.shape.speed * 3.0,
+                                speed: government.shape.speed * 3.0,
                                 color: RED,
                                 size,
                                 collided: false,
                             },
                         });
-                        enemy.bullet_count += 1;
+                        government.bullet_count += 1;
                     }
                 }
 
-                for bullet in enemy_bullets.iter_mut() {
+                for bullet in government_bullets.iter_mut() {
                     if bullet.shape.collides_with(&circle) {
                         if score == high_score {
                             save_high_score(score);
@@ -696,34 +696,34 @@ async fn main() -> Result<(), macroquad::Error> {
                     }
                 }
 
-                enemy_bullets.retain(|bullet| {
+                government_bullets.retain(|bullet| {
                     let should_keep = bullet.shape.y < screen_height + bullet.shape.size;
                     if !should_keep {
-                        if let Some(enemy) =
-                            enemies.iter_mut().find(|enemy| enemy.id == bullet.enemy_id)
+                        if let Some(government) =
+                            enemies.iter_mut().find(|government| government.id == bullet.government_id)
                         {
-                            enemy.bullet_count -= 1;
+                            government.bullet_count -= 1;
                         }
                     }
                     should_keep
                 });
 
-                enemies.retain(|enemy| enemy.shape.y < screen_height + enemy.shape.size);
+                enemies.retain(|government| government.shape.y < screen_height + government.shape.size);
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
-                enemies.retain(|enemy| !enemy.shape.collided);
+                enemies.retain(|government| !government.shape.collided);
                 bullets.retain(|bullet| !bullet.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 draw_game_objects(
                     &enemies,
                     &bullets,
-                    &enemy_bullets,
+                    &government_bullets,
                     &circle,
                     &mut explosions,
                     &bullet_sprite,
-                    &enemy_bullet_sprite,
+                    &government_bullet_sprite,
                     &ship_sprite,
-                    &enemy_small_sprite,
+                    &government_small_sprite,
                     &resources,
                 );
                 draw_score(score, high_score, high_score_beaten);
@@ -741,13 +741,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_objects(
                     &enemies,
                     &bullets,
-                    &enemy_bullets,
+                    &government_bullets,
                     &circle,
                     &mut explosions,
                     &bullet_sprite,
-                    &enemy_bullet_sprite,
+                    &government_bullet_sprite,
                     &ship_sprite,
-                    &enemy_small_sprite,
+                    &government_small_sprite,
                     &resources,
                 );
                 draw_score(score, high_score, high_score_beaten);
@@ -770,13 +770,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_objects(
                     &enemies,
                     &bullets,
-                    &enemy_bullets,
+                    &government_bullets,
                     &circle,
                     &mut explosions,
                     &bullet_sprite,
-                    &enemy_bullet_sprite,
+                    &government_bullet_sprite,
                     &ship_sprite,
-                    &enemy_small_sprite,
+                    &government_small_sprite,
                     &resources,
                 );
                 draw_score(score, high_score, high_score_beaten);
