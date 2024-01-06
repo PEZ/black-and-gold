@@ -417,6 +417,8 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut has_valid_mouse_position = false;
 
+    let mut has_started_steering = false;
+
     loop {
         clear_background(BLACK);
 
@@ -468,6 +470,7 @@ async fn main() -> Result<(), macroquad::Error> {
                             circle.y = screen_height - circle.size;
                             game_state = GameState::Playing;
                             has_valid_mouse_position = false;
+                            has_started_steering = false;
                         }
                         if ui.button(vec2(66.0, 125.0), "Exit") {
                             exit_game = true;
@@ -482,13 +485,19 @@ async fn main() -> Result<(), macroquad::Error> {
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
+                #[cfg(any(target_os = "ios", target_os = "android"))]
+                if has_started_steering && is_mouse_button_released(MouseButton::Left) {
+                    game_state = GameState::Paused;
+                    next_frame().await;
+                }
+                #[cfg(any(target_os = "ios", target_os = "android"))]
+                if !has_started_steering && is_mouse_button_pressed(MouseButton::Left) {
+                    has_valid_mouse_position = true;
+                    has_started_steering = true;
+                }
                 let delta_time = get_frame_time();
                 let my_movement_speed = delta_time * MOVEMENT_SPEED;
                 let star_movement_speed = delta_time * STARFIELD_SPEED;
-
-                if is_mouse_button_down(MouseButton::Left) {
-                    has_valid_mouse_position = true;
-                }
 
                 #[cfg(any(target_os = "ios", target_os = "android"))]
                 let (mouse_x, mouse_y) = if has_valid_mouse_position {
@@ -499,7 +508,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 #[cfg(any(target_os = "ios", target_os = "android"))]
                 let dir_x = mouse_x - circle.x;
                 #[cfg(any(target_os = "ios", target_os = "android"))]
-                let dir_y = mouse_y - circle.y - circle.size * 0.75;
+                let dir_y = mouse_y
+                    - circle.y
+                    - if has_started_steering {
+                        circle.size * 0.75
+                    } else {
+                        0.0
+                    };
                 #[cfg(not(any(target_os = "ios", target_os = "android")))]
                 let dir_x: f32 = if is_key_down(KeyCode::Left) {
                     -MOVEMENT_SPEED
@@ -712,11 +727,6 @@ async fn main() -> Result<(), macroquad::Error> {
                     &resources,
                 );
                 draw_score(score, high_score, high_score_beaten);
-                #[cfg(any(target_os = "ios", target_os = "android"))]
-                if is_mouse_button_released(MouseButton::Left) {
-                    game_state = GameState::Paused;
-                    next_frame().await;
-                }
             }
             GameState::Paused => {
                 set_sound_volume(&resources.theme_music, 0.2);
