@@ -76,11 +76,11 @@ struct Shape {
 }
 
 impl Shape {
-    fn collides_with_circle(&self, milei: &Shape) -> bool {
+    fn collides_with_circle(&self, circle: &Shape) -> bool {
         let half = self.size / 2.0;
-        let dx = (self.x - milei.x).abs().max(half) - half;
-        let dy = (self.y - milei.y).abs().max(half) - half;
-        dx * dx + dy * dy <= milei.size * milei.size / 4.0
+        let dx = (self.x - circle.x).abs().max(half) - half;
+        let dy = (self.y - circle.y).abs().max(half) - half;
+        dx * dx + dy * dy <= circle.size * circle.size / 4.0
     }
     fn collides_with(&self, other: &Self) -> bool {
         self.rect().overlaps(&other.rect())
@@ -104,6 +104,15 @@ struct Government {
 struct GovernmentBullet {
     government_id: usize,
     shape: Shape,
+}
+
+struct MileiBullet {
+    shape: Shape,
+}
+
+struct Milei {
+    shape: Shape,
+    bullet_count: usize,
 }
 
 enum GameState {
@@ -158,7 +167,7 @@ fn draw_game_objects(
     goons: &[Government],
     bullets: &[Shape],
     government_bullets: &[GovernmentBullet],
-    milei: &Shape,
+    milei: &Milei,
     explosions: &mut [(Emitter, Vec2)],
     bullet_sprite: &AnimatedSprite,
     government_bullet_sprite: &AnimatedSprite,
@@ -215,8 +224,8 @@ fn draw_game_objects(
     let ship_frame = ship_sprite.frame();
     draw_texture_ex(
         &resources.milei_texture,
-        milei.x - ship_frame.dest_size.x,
-        milei.y - ship_frame.dest_size.y,
+        milei.shape.x - ship_frame.dest_size.x,
+        milei.shape.y - ship_frame.dest_size.y,
         WHITE,
         DrawTextureParams {
             dest_size: Some(ship_frame.dest_size * 2.0),
@@ -363,15 +372,18 @@ async fn main() -> Result<(), macroquad::Error> {
     let milei_size = BALL_RADIUS * 2.0;
     let ship_sprite_w = ship_sprite.frame().source_rect.w;
     let ship_sprite_h = ship_sprite.frame().source_rect.h;
-    let mut milei = Shape {
-        size: milei_size,
-        speed: MOVEMENT_SPEED,
-        x: screen_width() / 2.0,
-        y: screen_height() / 2.0,
-        w: ship_sprite_w * milei_size / ship_sprite_w,
-        h: ship_sprite_h * milei_size / ship_sprite_h,
-        color: GOLD,
-        collided: false,
+    let mut milei = Milei {
+        shape: Shape {
+            size: milei_size,
+            speed: MOVEMENT_SPEED,
+            x: screen_width() / 2.0,
+            y: screen_height() / 2.0,
+            w: ship_sprite_w * milei_size / ship_sprite_w,
+            h: ship_sprite_h * milei_size / ship_sprite_h,
+            color: GOLD,
+            collided: false,
+        },
+        bullet_count: 0,
     };
 
     let mut bullet_sprite = AnimatedSprite::new(
@@ -466,8 +478,8 @@ async fn main() -> Result<(), macroquad::Error> {
                             bullets.clear();
                             government_bullets.clear();
                             explosions.clear();
-                            milei.x = screen_width / 2.0;
-                            milei.y = screen_height - milei.size;
+                            milei.shape.x = screen_width / 2.0;
+                            milei.shape.y = screen_height - milei.shape.size;
                             game_state = GameState::Playing;
                             has_valid_mouse_position = false;
                             has_started_steering = false;
@@ -503,13 +515,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 let (mouse_x, mouse_y) = if has_valid_mouse_position {
                     mouse_position()
                 } else {
-                    (milei.x, milei.y)
+                    (milei.shape.x, milei.shape.y)
                 };
                 #[cfg(any(target_os = "ios", target_os = "android"))]
-                let dir_x = mouse_x - milei.x;
+                let dir_x = mouse_x - milei.shape.x;
                 #[cfg(any(target_os = "ios", target_os = "android"))]
                 let dir_y = mouse_y
-                    - milei.y
+                    - milei.shape.y
                     - if has_started_steering {
                         milei.size * 0.75
                     } else {
@@ -537,7 +549,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     left_direction_time = get_time();
                 }
                 if dir_x < 0.0 {
-                    milei.x -= my_movement_speed.min(dir_x.abs());
+                    milei.shape.x -= my_movement_speed.min(dir_x.abs());
                     direction_modifier -= star_movement_speed;
                     ship_sprite.set_animation(if get_time() < left_direction_time + 0.5 {
                         1
@@ -549,7 +561,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     right_direction_time = get_time();
                 }
                 if dir_x > 0.0 {
-                    milei.x += my_movement_speed.min(dir_x);
+                    milei.shape.x += my_movement_speed.min(dir_x);
                     direction_modifier += star_movement_speed;
                     ship_sprite.set_animation(if get_time() < right_direction_time + 0.5 {
                         3
@@ -558,18 +570,18 @@ async fn main() -> Result<(), macroquad::Error> {
                     });
                 }
                 if dir_y > 0.0 {
-                    milei.y += my_movement_speed.min(dir_y);
+                    milei.shape.y += my_movement_speed.min(dir_y);
                 }
                 if dir_y < 0.0 {
-                    milei.y -= my_movement_speed.min(dir_y.abs());
+                    milei.shape.y -= my_movement_speed.min(dir_y.abs());
                 }
 
-                milei.x = milei
-                    .x
+                milei.shape.x = milei
+                    .shape.x
                     .min(screen_width - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
-                milei.y = milei
-                    .y
+                milei.shape.y = milei
+                    .shape.y
                     .min(screen_height - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
 
@@ -581,11 +593,11 @@ async fn main() -> Result<(), macroquad::Error> {
                     let w = bullet_sprite_w * size / bullet_sprite_w;
                     let h = bullet_sprite_h * size / bullet_sprite_h;
                     bullets.push(Shape {
-                        x: milei.x,
-                        y: milei.y - 24.0,
+                        x: milei.shape.x,
+                        y: milei.shape.y - 24.0,
                         w,
                         h,
-                        speed: milei.speed * 2.0,
+                        speed: milei.shape.speed * 2.0,
                         color: GOLD,
                         size,
                         collided: false,
@@ -632,7 +644,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 if goons
                     .iter()
-                    .any(|government| government.shape.collides_with_circle(&milei))
+                    .any(|government| government.shape.collides_with_circle(&milei.shape))
                 {
                     if score == high_score {
                         save_high_score(score);
@@ -661,13 +673,15 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
-                    if milei.x > government.shape.x - government.shape.w / 2.0
-                        && milei.x < government.shape.x + government.shape.w / 2.0
+                    if milei.shape.x > government.shape.x - government.shape.w / 2.0
+                        && milei.shape.x < government.shape.x + government.shape.w / 2.0
                         && government.bullet_count < 1
                     {
                         let size = 16.0;
-                        let government_bullet_sprite_w = government_bullet_sprite.frame().source_rect.w;
-                        let government_bullet_sprite_h = government_bullet_sprite.frame().source_rect.h;
+                        let government_bullet_sprite_w =
+                            government_bullet_sprite.frame().source_rect.w;
+                        let government_bullet_sprite_h =
+                            government_bullet_sprite.frame().source_rect.h;
                         let w = government_bullet_sprite_w * size / government_bullet_sprite_w;
                         let h = government_bullet_sprite_h * size / government_bullet_sprite_h;
                         government_bullets.push(GovernmentBullet {
@@ -688,7 +702,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 for bullet in government_bullets.iter_mut() {
-                    if bullet.shape.collides_with(&milei) {
+                    if bullet.shape.collides_with(&milei.shape) {
                         if score == high_score {
                             save_high_score(score);
                         }
@@ -699,8 +713,9 @@ async fn main() -> Result<(), macroquad::Error> {
                 government_bullets.retain(|bullet| {
                     let should_keep = bullet.shape.y < screen_height + bullet.shape.size;
                     if !should_keep {
-                        if let Some(government) =
-                            goons.iter_mut().find(|government| government.id == bullet.government_id)
+                        if let Some(government) = goons
+                            .iter_mut()
+                            .find(|government| government.id == bullet.government_id)
                         {
                             government.bullet_count -= 1;
                         }
@@ -708,7 +723,9 @@ async fn main() -> Result<(), macroquad::Error> {
                     should_keep
                 });
 
-                goons.retain(|government| government.shape.y < screen_height + government.shape.size);
+                goons.retain(|government| {
+                    government.shape.y < screen_height + government.shape.size
+                });
                 bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 goons.retain(|government| !government.shape.collided);
                 bullets.retain(|bullet| !bullet.collided);
