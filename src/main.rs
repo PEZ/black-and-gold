@@ -96,11 +96,64 @@ impl Shape {
     }
 }
 
+enum Vastness {
+    XXS = 0,
+    XS = 1,
+    S = 2,
+    M = 3,
+    L = 4,
+    XL = 5,
+    XXL = 6,
+    XXXL = 7,
+    XXXXL = 8,
+    XXXXXL = 9,
+}
+
+impl Vastness {
+    fn from_int(value: usize) -> Option<Self> {
+        match value {
+            0 => Some(Vastness::XXS),
+            1 => Some(Vastness::XS),
+            2 => Some(Vastness::S),
+            3 => Some(Vastness::M),
+            4 => Some(Vastness::L),
+            5 => Some(Vastness::XL),
+            6 => Some(Vastness::XXL),
+            7 => Some(Vastness::XXXL),
+            8 => Some(Vastness::XXXXL),
+            9 => Some(Vastness::XXXXXL),
+            _ => None,
+        }
+    }
+
+    fn to_float(&self) -> f32 {
+        match self {
+            Vastness::XXS => 16.0,
+            Vastness::XS => 20.0,
+            Vastness::S => 24.0,
+            Vastness::M => 28.0,
+            Vastness::L => 32.0,
+            Vastness::XL => 36.0,
+            Vastness::XXL => 40.0,
+            Vastness::XXXL => 48.0,
+            Vastness::XXXXL => 56.0,
+            Vastness::XXXXXL => 64.0,
+        }
+    }
+
+    fn choose_one() -> Self {
+        let value = rand::gen_range(0, 9);
+        Vastness::from_int(value).unwrap()
+    }
+}
+
 struct Government {
     id: usize,
+    vastness: Vastness,
     shape: Shape,
     bullet_count: usize,
 }
+
 struct GovernmentBullet {
     goon_id: usize,
     shape: Shape,
@@ -379,7 +432,6 @@ async fn main() -> Result<(), macroquad::Error> {
         },
         bullets: vec![],
         last_bullet_time: get_time(),
-
     };
 
     let mut bullet_sprite = AnimatedSprite::new(
@@ -573,11 +625,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 milei.shape.x = milei
-                    .shape.x
+                    .shape
+                    .x
                     .min(screen_width - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
                 milei.shape.y = milei
-                    .shape.y
+                    .shape
+                    .y
                     .min(screen_height - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
 
@@ -602,13 +656,15 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 if goons.len() < max_goons && rand::gen_range(0, 99) >= 95 {
-                    let size = rand::gen_range(16.0, 64.0) * scale;
+                    let vastness = Vastness::choose_one();
+                    let size = vastness.to_float() * scale;
                     let ship_sprite_w = government_small_sprite.frame().source_rect.w;
                     let ship_sprite_h = government_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
                     let h = ship_sprite_h * size / ship_sprite_h;
                     goons.push(Government {
                         id: next_goon_id,
+                        vastness,
                         bullet_count: 0,
                         shape: Shape {
                             size,
@@ -653,7 +709,8 @@ async fn main() -> Result<(), macroquad::Error> {
                         if bullet.collides_with(&goon.shape) {
                             bullet.collided = true;
                             goon.shape.collided = true;
-                            score += goon.shape.size.round() as u32;
+                            let score_add = goon.vastness.to_float() / 4.0;
+                            score += score_add.round() as u32;
                             if score > high_score {
                                 high_score_beaten = true;
                                 high_score = score;
@@ -722,7 +779,9 @@ async fn main() -> Result<(), macroquad::Error> {
                 goons.retain(|government| {
                     government.shape.y < screen_height + government.shape.size
                 });
-                milei.bullets.retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
+                milei
+                    .bullets
+                    .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 milei.bullets.retain(|bullet| !bullet.collided);
                 goons.retain(|government| !government.shape.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
