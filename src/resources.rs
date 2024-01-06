@@ -8,7 +8,7 @@ pub struct Resources {
   pub milei_texture: Texture2D,
   pub bullet_texture: Texture2D,
   pub explosion_texture: Texture2D,
-  pub government_small_texture: Texture2D,
+  pub goon_small_texture: Texture2D,
   pub theme_music: Sound,
   pub sound_explosion: Sound,
   pub sound_laser: Sound,
@@ -23,8 +23,8 @@ impl Resources {
       bullet_texture.set_filter(FilterMode::Nearest);
       let explosion_texture: Texture2D = load_texture("explosion.png").await?;
       explosion_texture.set_filter(FilterMode::Nearest);
-      let government_small_texture: Texture2D = load_texture("government-small.png").await?;
-      government_small_texture.set_filter(FilterMode::Nearest);
+      let goon_small_texture: Texture2D = load_texture("goon-small.png").await?;
+      goon_small_texture.set_filter(FilterMode::Nearest);
 
       let theme_music = load_sound("8bit-spaceshooter.ogg").await?;
       let sound_explosion = load_sound("explosion.wav").await?;
@@ -68,7 +68,7 @@ impl Resources {
           milei_texture: ship_texture,
           bullet_texture,
           explosion_texture,
-          government_small_texture,
+          goon_small_texture,
           theme_music,
           sound_explosion,
           sound_laser,

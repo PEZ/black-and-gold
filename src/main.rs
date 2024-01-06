@@ -58,7 +58,7 @@ fn load_high_score() -> u32 {
 }
 
 lazy_static! {
-    static ref GOVERNMENT_COLORS: Vec<Color> = vec![
+    static ref GOON_COLORS: Vec<Color> = vec![
         BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY, GREEN,
         LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
     ];
@@ -102,11 +102,7 @@ struct Government {
     bullet_count: usize,
 }
 struct GovernmentBullet {
-    government_id: usize,
-    shape: Shape,
-}
-
-struct MileiBullet {
+    goon_id: usize,
     shape: Shape,
 }
 
@@ -172,19 +168,19 @@ fn draw_game_objects(
     bullet_sprite: &AnimatedSprite,
     government_bullet_sprite: &AnimatedSprite,
     ship_sprite: &AnimatedSprite,
-    government_small_sprite: &AnimatedSprite,
+    goon_small_sprite: &AnimatedSprite,
     resources: &Resources,
 ) {
-    let government_frame: animation::AnimationFrame = government_small_sprite.frame();
-    for government in goons {
+    let goon_frame: animation::AnimationFrame = goon_small_sprite.frame();
+    for goon in goons {
         draw_texture_ex(
-            &resources.government_small_texture,
-            government.shape.x - government.shape.size / 2.0,
-            government.shape.y - government.shape.size / 2.0,
+            &resources.goon_small_texture,
+            goon.shape.x - goon.shape.size / 2.0,
+            goon.shape.y - goon.shape.size / 2.0,
             WHITE, // square.color,
             DrawTextureParams {
-                dest_size: Some(vec2(government.shape.size, government.shape.size)),
-                source: Some(government_frame.source_rect),
+                dest_size: Some(vec2(goon.shape.size, goon.shape.size)),
+                source: Some(goon_frame.source_rect),
                 ..Default::default()
             },
         );
@@ -290,7 +286,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut high_score_beaten = false;
 
     let mut goons = vec![];
-    let mut next_government_id = 0;
+    let mut next_goon_id = 0;
     let mut government_bullets: Vec<GovernmentBullet> = vec![];
 
     let mut direction_modifier: f32 = 0.0;
@@ -416,7 +412,7 @@ async fn main() -> Result<(), macroquad::Error> {
         17,
         16,
         &[Animation {
-            name: "government_small".to_string(),
+            name: "goon_small".to_string(),
             row: 0,
             frames: 2,
             fps: 12,
@@ -612,7 +608,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     let w = ship_sprite_w * size / ship_sprite_w;
                     let h = ship_sprite_h * size / ship_sprite_h;
                     goons.push(Government {
-                        id: next_government_id,
+                        id: next_goon_id,
                         bullet_count: 0,
                         shape: Shape {
                             size,
@@ -621,11 +617,11 @@ async fn main() -> Result<(), macroquad::Error> {
                             y: -size,
                             w,
                             h,
-                            color: *GOVERNMENT_COLORS.choose().unwrap(),
+                            color: *GOON_COLORS.choose().unwrap(),
                             collided: false,
                         },
                     });
-                    next_government_id += 1;
+                    next_goon_id += 1;
                 }
 
                 for government in &mut goons {
@@ -652,19 +648,19 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::GameOver;
                 }
 
-                for government in goons.iter_mut() {
+                for goon in goons.iter_mut() {
                     for bullet in milei.bullets.iter_mut() {
-                        if bullet.collides_with(&government.shape) {
+                        if bullet.collides_with(&goon.shape) {
                             bullet.collided = true;
-                            government.shape.collided = true;
-                            score += government.shape.size.round() as u32;
+                            goon.shape.collided = true;
+                            score += goon.shape.size.round() as u32;
                             if score > high_score {
                                 high_score_beaten = true;
                                 high_score = score;
                             }
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: government.shape.size.round() as u32 * 2,
+                                    amount: goon.shape.size.round() as u32 * 2,
                                     texture: Some(resources.explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
@@ -673,9 +669,9 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
-                    if milei.shape.x > government.shape.x - government.shape.w / 2.0
-                        && milei.shape.x < government.shape.x + government.shape.w / 2.0
-                        && government.bullet_count < 1
+                    if milei.shape.x > goon.shape.x - goon.shape.w / 2.0
+                        && milei.shape.x < goon.shape.x + goon.shape.w / 2.0
+                        && goon.bullet_count < 1
                     {
                         let size = 16.0;
                         let government_bullet_sprite_w =
@@ -685,19 +681,19 @@ async fn main() -> Result<(), macroquad::Error> {
                         let w = government_bullet_sprite_w * size / government_bullet_sprite_w;
                         let h = government_bullet_sprite_h * size / government_bullet_sprite_h;
                         government_bullets.push(GovernmentBullet {
-                            government_id: government.id,
+                            goon_id: goon.id,
                             shape: Shape {
-                                x: government.shape.x,
-                                y: government.shape.y + government.shape.size / 2.0,
+                                x: goon.shape.x,
+                                y: goon.shape.y + goon.shape.size / 2.0,
                                 w,
                                 h,
-                                speed: government.shape.speed * 3.0,
+                                speed: goon.shape.speed * 3.0,
                                 color: RED,
                                 size,
                                 collided: false,
                             },
                         });
-                        government.bullet_count += 1;
+                        goon.bullet_count += 1;
                     }
                 }
 
@@ -715,7 +711,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     if !should_keep {
                         if let Some(government) = goons
                             .iter_mut()
-                            .find(|government| government.id == bullet.government_id)
+                            .find(|government| government.id == bullet.goon_id)
                         {
                             government.bullet_count -= 1;
                         }
