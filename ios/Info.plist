@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>mitt-spel</string>
     <key>CFBundleIdentifier</key>
-    <string>news.afuera</string>
+    <string>news.afuera.Afuera</string>
     <key>CFBundleName</key>
     <string>Afuera</string>
     <key>CFBundleVersion</key>
