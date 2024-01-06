@@ -673,7 +673,7 @@ async fn main() -> Result<(), macroquad::Error> {
                         && milei.shape.x < goon.shape.x + goon.shape.w / 2.0
                         && goon.bullet_count < 1
                     {
-                        let size = 16.0;
+                        let size = 32.0;
                         let government_bullet_sprite_w =
                             government_bullet_sprite.frame().source_rect.w;
                         let government_bullet_sprite_h =
