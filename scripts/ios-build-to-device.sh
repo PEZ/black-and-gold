@@ -9,7 +9,7 @@ fi
 SIGNING_IDENTITY=$1
 DEVICE_ID=$2
 
-BINARY_NAME="mitt-spel"
+BINARY_NAME="afuera"
 APP_NAME="Afuera.app"
 
 "$SCRIPT_DIR/ios-init-bundle.sh" dev

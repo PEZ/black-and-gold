@@ -29,7 +29,7 @@ pub fn setup_logger() {
 
     #[cfg(target_os = "ios")]
     {
-        OsLogger::new("news.afuera.Mitt-Spel")
+        OsLogger::new("news.afuera.Afuera")
             .level_filter(LevelFilter::Debug)
             .init()
             .unwrap();

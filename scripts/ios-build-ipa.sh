@@ -8,7 +8,7 @@ if [ $# -ne 1 ]; then
 fi
 SIGNING_IDENTITY=$1
 
-BINARY_NAME="mitt-spel"
+BINARY_NAME="afuera"
 APP_NAME="Afuera"
 
 "$SCRIPT_DIR/ios-init-bundle.sh" dist

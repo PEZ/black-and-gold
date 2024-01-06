@@ -9,6 +9,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f26201604c87b1e01bd3d98f8d5d9a8fcbb815e8cedb41ffccbeb4bf593a35fe"
 
 [[package]]
+name = "afuera"
+version = "0.1.0"
+dependencies = [
+ "lazy_static",
+ "log",
+ "macroquad",
+ "macroquad-particles",
+ "notify",
+ "objc",
+ "oslog",
+ "quad-storage",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -397,20 +411,6 @@ dependencies = [
  "log",
  "wasi",
  "windows-sys 0.48.0",
-]
-
-[[package]]
-name = "mitt-spel"
-version = "0.1.0"
-dependencies = [
- "lazy_static",
- "log",
- "macroquad",
- "macroquad-particles",
- "notify",
- "objc",
- "oslog",
- "quad-storage",
 ]
 
 [[package]]

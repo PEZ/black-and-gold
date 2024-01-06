@@ -523,7 +523,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 let dir_y = mouse_y
                     - milei.shape.y
                     - if has_started_steering {
-                        milei.size * 0.75
+                        milei.shape.size * 0.75
                     } else {
                         0.0
                     };

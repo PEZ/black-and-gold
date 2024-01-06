@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-BINARY_NAME="mitt-spel"
+BINARY_NAME="afuera"
 APP_NAME="Afuera.app"
 
 cargo build --target x86_64-apple-ios --release
