@@ -597,7 +597,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 #[cfg(any(target_os = "ios", target_os = "android"))]
                 let dir_x = mouse_x - circle.x;
                 #[cfg(any(target_os = "ios", target_os = "android"))]
-                let dir_y = mouse_y - circle.y;
+                let dir_y = mouse_y - circle.y - circle.size * 0.75;
                 #[cfg(not(any(target_os = "ios", target_os = "android")))]
                 let dir_x: f32 = if is_key_down(KeyCode::Left) {
                     -MOVEMENT_SPEED
