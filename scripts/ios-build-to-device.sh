@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <signing-identity> <device-id>"
@@ -9,7 +10,9 @@ SIGNING_IDENTITY=$1
 DEVICE_ID=$2
 
 BINARY_NAME="mitt-spel"
-APP_NAME="MittSpel.app"
+APP_NAME="Afuera.app"
+
+"$SCRIPT_DIR/ios-init-bundle.sh" dev
 
 cargo build --target aarch64-apple-ios --release
 cp -r assets "ios/$APP_NAME"

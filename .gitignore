@@ -2,5 +2,7 @@
 highscore.dat
 mitt-spel.wasm
 local.data
-ios/MittSpel.app/*
-!ios/MittSpel.app/Info.plist
+ios/Afuera.app/*
+ios/Afuera.ipa
+*.mobileprovision
+MittSpel*.*
