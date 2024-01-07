@@ -42,9 +42,13 @@ fn load_high_score() -> u32 {
         .unwrap()
 }
 
+struct MileiBullet {
+    screen_object: ScreenObject,
+}
+
 struct Milei {
     screen_object: ScreenObject,
-    bullets: Vec<ScreenObject>,
+    bullets: Vec<MileiBullet>,
     last_bullet_time: f64,
 }
 
@@ -142,11 +146,11 @@ fn draw_game_objects(
     for bullet in &mut milei.bullets {
         draw_texture_ex(
             &resources.bullet_texture,
-            bullet.x - bullet.size / 2.0,
-            bullet.y - bullet.size / 2.0,
-            bullet.color,
+            bullet.screen_object.x - bullet.screen_object.size / 2.0,
+            bullet.screen_object.y - bullet.screen_object.size / 2.0,
+            bullet.screen_object.color,
             DrawTextureParams {
-                dest_size: Some(vec2(bullet.size, bullet.size)),
+                dest_size: Some(vec2(bullet.screen_object.size, bullet.screen_object.size)),
                 source: Some(bullet_frame.source_rect),
                 ..Default::default()
             },
@@ -521,15 +525,17 @@ async fn main() -> Result<(), macroquad::Error> {
                     let bullet_sprite_h = bullet_sprite.frame().source_rect.h;
                     let w = bullet_sprite_w * size / bullet_sprite_w;
                     let h = bullet_sprite_h * size / bullet_sprite_h;
-                    milei.bullets.push(ScreenObject {
-                        x: milei.screen_object.x,
-                        y: milei.screen_object.y - 24.0,
-                        w,
-                        h,
-                        speed: milei.screen_object.speed * 2.0,
-                        color: GOLD,
-                        size,
-                        collided: false,
+                    milei.bullets.push(MileiBullet {
+                        screen_object: ScreenObject {
+                            x: milei.screen_object.x,
+                            y: milei.screen_object.y - 24.0,
+                            w,
+                            h,
+                            speed: milei.screen_object.speed * 2.0,
+                            color: GOLD,
+                            size,
+                            collided: false,
+                        },
                     });
                     play_sound_once(&resources.sound_laser);
                 }
@@ -539,7 +545,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     let speed = rand::gen_range(50.0, 150.0);
                     let size = vastness.to_float() * scale;
                     let x = rand::gen_range(size / 2.0, screen_width - size / 2.0);
-                    
+
                     let ship_sprite_w = government_small_sprite.frame().source_rect.w;
                     let ship_sprite_h = government_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
@@ -551,14 +557,16 @@ async fn main() -> Result<(), macroquad::Error> {
                 government.update_bullets(delta_time);
 
                 for bullet in &mut milei.bullets {
-                    bullet.y -= bullet.speed * delta_time;
+                    bullet.screen_object.y -= bullet.screen_object.speed * delta_time;
                 }
 
                 ship_sprite.update();
                 bullet_sprite.update();
                 government_small_sprite.update();
 
-                if government.has_hit_screen_object(&milei.screen_object) || government.has_bullet_hit_screen_object(&milei.screen_object) {
+                if government.has_hit_screen_object(&milei.screen_object)
+                    || government.has_bullet_hit_screen_object(&milei.screen_object)
+                {
                     if score == high_score {
                         save_high_score(score);
                     }
@@ -567,8 +575,8 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 for goon in government.goons.iter_mut() {
                     for bullet in milei.bullets.iter_mut() {
-                        if bullet.collides_with(&goon.screen_object) {
-                            bullet.collided = true;
+                        if bullet.screen_object.collides_with(&goon.screen_object) {
+                            bullet.screen_object.collided = true;
                             goon.screen_object.collided = true;
                             let score_add = goon.vastness.to_float() / 4.0;
                             score += score_add.round() as u32;
@@ -582,7 +590,7 @@ async fn main() -> Result<(), macroquad::Error> {
                                     texture: Some(resources.explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
-                                vec2(bullet.x, bullet.y),
+                                vec2(bullet.screen_object.x, bullet.screen_object.y),
                             ));
                             play_sound_once(&resources.sound_explosion);
                         }
@@ -615,13 +623,14 @@ async fn main() -> Result<(), macroquad::Error> {
                     }
                 }
 
-
-
                 government.bullets.retain(|bullet| {
                     let should_keep =
                         bullet.screen_object.y < screen_height + bullet.screen_object.size;
                     if !should_keep {
-                        if let Some(goon) = government.goons.iter_mut().find(|goon| goon.id == bullet.goon_id)
+                        if let Some(goon) = government
+                            .goons
+                            .iter_mut()
+                            .find(|goon| goon.id == bullet.goon_id)
                         {
                             goon.bullet_count -= 1;
                         }
@@ -629,11 +638,13 @@ async fn main() -> Result<(), macroquad::Error> {
                     should_keep
                 });
 
-                government.goons.retain(|goon| goon.screen_object.y < screen_height + goon.screen_object.size);
+                government
+                    .goons
+                    .retain(|goon| goon.screen_object.y < screen_height + goon.screen_object.size);
                 milei
                     .bullets
-                    .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
-                milei.bullets.retain(|bullet| !bullet.collided);
+                    .retain(|bullet| bullet.screen_object.y > 0.0 - bullet.screen_object.size / 2.0);
+                milei.bullets.retain(|bullet| !bullet.screen_object.collided);
                 government.goons.retain(|goon| !goon.screen_object.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
