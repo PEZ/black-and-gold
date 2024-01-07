@@ -64,7 +64,7 @@ lazy_static! {
     ];
 }
 
-struct Shape {
+struct ScreenObject {
     size: f32,
     speed: f32,
     x: f32,
@@ -75,8 +75,8 @@ struct Shape {
     collided: bool,
 }
 
-impl Shape {
-    fn collides_with_circle(&self, circle: &Shape) -> bool {
+impl ScreenObject {
+    fn collides_with_circle(&self, circle: &ScreenObject) -> bool {
         let half = self.size / 2.0;
         let dx = (self.x - circle.x).abs().max(half) - half;
         let dy = (self.y - circle.y).abs().max(half) - half;
@@ -150,18 +150,18 @@ impl Vastness {
 struct Government {
     id: usize,
     vastness: Vastness,
-    shape: Shape,
+    screen_object: ScreenObject,
     bullet_count: usize,
 }
 
 struct GovernmentBullet {
     goon_id: usize,
-    shape: Shape,
+    screen_object: ScreenObject,
 }
 
 struct Milei {
-    shape: Shape,
-    bullets: Vec<Shape>,
+    screen_object: ScreenObject,
+    bullets: Vec<ScreenObject>,
     last_bullet_time: f64,
 }
 
@@ -228,11 +228,11 @@ fn draw_game_objects(
     for goon in goons {
         draw_texture_ex(
             &resources.goon_small_texture,
-            goon.shape.x - goon.shape.size / 2.0,
-            goon.shape.y - goon.shape.size / 2.0,
+            goon.screen_object.x - goon.screen_object.size / 2.0,
+            goon.screen_object.y - goon.screen_object.size / 2.0,
             WHITE, // square.color,
             DrawTextureParams {
-                dest_size: Some(vec2(goon.shape.size, goon.shape.size)),
+                dest_size: Some(vec2(goon.screen_object.size, goon.screen_object.size)),
                 source: Some(goon_frame.source_rect),
                 ..Default::default()
             },
@@ -243,11 +243,11 @@ fn draw_game_objects(
     for bullet in government_bullets {
         draw_texture_ex(
             &resources.bullet_texture,
-            bullet.shape.x - bullet.shape.size / 2.0,
-            bullet.shape.y - bullet.shape.size / 2.0,
-            bullet.shape.color,
+            bullet.screen_object.x - bullet.screen_object.size / 2.0,
+            bullet.screen_object.y - bullet.screen_object.size / 2.0,
+            bullet.screen_object.color,
             DrawTextureParams {
-                dest_size: Some(vec2(bullet.shape.size, bullet.shape.size)),
+                dest_size: Some(vec2(bullet.screen_object.size, bullet.screen_object.size)),
                 source: Some(bullet_frame.source_rect),
                 rotation: PI,
                 ..Default::default()
@@ -273,8 +273,8 @@ fn draw_game_objects(
     let ship_frame = ship_sprite.frame();
     draw_texture_ex(
         &resources.milei_texture,
-        milei.shape.x - ship_frame.dest_size.x,
-        milei.shape.y - ship_frame.dest_size.y,
+        milei.screen_object.x - ship_frame.dest_size.x,
+        milei.screen_object.y - ship_frame.dest_size.y,
         WHITE,
         DrawTextureParams {
             dest_size: Some(ship_frame.dest_size * 2.0),
@@ -420,7 +420,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let ship_sprite_w = ship_sprite.frame().source_rect.w;
     let ship_sprite_h = ship_sprite.frame().source_rect.h;
     let mut milei = Milei {
-        shape: Shape {
+        screen_object: ScreenObject {
             size: milei_size,
             speed: MOVEMENT_SPEED,
             x: screen_width() / 2.0,
@@ -526,8 +526,8 @@ async fn main() -> Result<(), macroquad::Error> {
                             milei.bullets.clear();
                             government_bullets.clear();
                             explosions.clear();
-                            milei.shape.x = screen_width / 2.0;
-                            milei.shape.y = screen_height - milei.shape.size;
+                            milei.screen_object.x = screen_width / 2.0;
+                            milei.screen_object.y = screen_height - milei.screen_object.size;
                             game_state = GameState::Playing;
                             has_valid_mouse_position = false;
                             has_started_steering = false;
@@ -563,15 +563,15 @@ async fn main() -> Result<(), macroquad::Error> {
                 let (mouse_x, mouse_y) = if has_valid_mouse_position {
                     mouse_position()
                 } else {
-                    (milei.shape.x, milei.shape.y)
+                    (milei.screen_object.x, milei.screen_object.y)
                 };
                 #[cfg(any(target_os = "ios", target_os = "android"))]
-                let dir_x = mouse_x - milei.shape.x;
+                let dir_x = mouse_x - milei.screen_object.x;
                 #[cfg(any(target_os = "ios", target_os = "android"))]
                 let dir_y = mouse_y
-                    - milei.shape.y
+                    - milei.screen_object.y
                     - if has_started_steering {
-                        milei.shape.size * 0.75
+                        milei.screen_object.size * 0.75
                     } else {
                         0.0
                     };
@@ -597,7 +597,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     left_direction_time = get_time();
                 }
                 if dir_x < 0.0 {
-                    milei.shape.x -= my_movement_speed.min(dir_x.abs());
+                    milei.screen_object.x -= my_movement_speed.min(dir_x.abs());
                     direction_modifier -= star_movement_speed;
                     ship_sprite.set_animation(if get_time() < left_direction_time + 0.5 {
                         1
@@ -609,7 +609,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     right_direction_time = get_time();
                 }
                 if dir_x > 0.0 {
-                    milei.shape.x += my_movement_speed.min(dir_x);
+                    milei.screen_object.x += my_movement_speed.min(dir_x);
                     direction_modifier += star_movement_speed;
                     ship_sprite.set_animation(if get_time() < right_direction_time + 0.5 {
                         3
@@ -618,19 +618,19 @@ async fn main() -> Result<(), macroquad::Error> {
                     });
                 }
                 if dir_y > 0.0 {
-                    milei.shape.y += my_movement_speed.min(dir_y);
+                    milei.screen_object.y += my_movement_speed.min(dir_y);
                 }
                 if dir_y < 0.0 {
-                    milei.shape.y -= my_movement_speed.min(dir_y.abs());
+                    milei.screen_object.y -= my_movement_speed.min(dir_y.abs());
                 }
 
-                milei.shape.x = milei
-                    .shape
+                milei.screen_object.x = milei
+                    .screen_object
                     .x
                     .min(screen_width - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
-                milei.shape.y = milei
-                    .shape
+                milei.screen_object.y = milei
+                    .screen_object
                     .y
                     .min(screen_height - BALL_RADIUS)
                     .max(0.0 + BALL_RADIUS);
@@ -642,12 +642,12 @@ async fn main() -> Result<(), macroquad::Error> {
                     let bullet_sprite_h = bullet_sprite.frame().source_rect.h;
                     let w = bullet_sprite_w * size / bullet_sprite_w;
                     let h = bullet_sprite_h * size / bullet_sprite_h;
-                    milei.bullets.push(Shape {
-                        x: milei.shape.x,
-                        y: milei.shape.y - 24.0,
+                    milei.bullets.push(ScreenObject {
+                        x: milei.screen_object.x,
+                        y: milei.screen_object.y - 24.0,
                         w,
                         h,
-                        speed: milei.shape.speed * 2.0,
+                        speed: milei.screen_object.speed * 2.0,
                         color: GOLD,
                         size,
                         collided: false,
@@ -666,7 +666,7 @@ async fn main() -> Result<(), macroquad::Error> {
                         id: next_goon_id,
                         vastness,
                         bullet_count: 0,
-                        shape: Shape {
+                        screen_object: ScreenObject {
                             size,
                             speed: rand::gen_range(50.0, 150.0),
                             x: rand::gen_range(size / 2.0, screen_width - size / 2.0),
@@ -681,13 +681,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 for government in &mut goons {
-                    government.shape.y += government.shape.speed * delta_time;
+                    government.screen_object.y += government.screen_object.speed * delta_time;
                 }
                 for bullet in &mut milei.bullets {
                     bullet.y -= bullet.speed * delta_time;
                 }
                 for bullet in &mut government_bullets {
-                    bullet.shape.y += bullet.shape.speed * delta_time;
+                    bullet.screen_object.y += bullet.screen_object.speed * delta_time;
                 }
 
                 ship_sprite.update();
@@ -696,7 +696,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 if goons
                     .iter()
-                    .any(|government| government.shape.collides_with_circle(&milei.shape))
+                    .any(|government| government.screen_object.collides_with_circle(&milei.screen_object))
                 {
                     if score == high_score {
                         save_high_score(score);
@@ -706,9 +706,9 @@ async fn main() -> Result<(), macroquad::Error> {
 
                 for goon in goons.iter_mut() {
                     for bullet in milei.bullets.iter_mut() {
-                        if bullet.collides_with(&goon.shape) {
+                        if bullet.collides_with(&goon.screen_object) {
                             bullet.collided = true;
-                            goon.shape.collided = true;
+                            goon.screen_object.collided = true;
                             let score_add = goon.vastness.to_float() / 4.0;
                             score += score_add.round() as u32;
                             if score > high_score {
@@ -717,7 +717,7 @@ async fn main() -> Result<(), macroquad::Error> {
                             }
                             explosions.push((
                                 Emitter::new(EmitterConfig {
-                                    amount: goon.shape.size.round() as u32 * 2,
+                                    amount: goon.screen_object.size.round() as u32 * 2,
                                     texture: Some(resources.explosion_texture.clone()),
                                     ..particle_explosion()
                                 }),
@@ -726,8 +726,8 @@ async fn main() -> Result<(), macroquad::Error> {
                             play_sound_once(&resources.sound_explosion);
                         }
                     }
-                    if milei.shape.x > goon.shape.x - goon.shape.w / 2.0
-                        && milei.shape.x < goon.shape.x + goon.shape.w / 2.0
+                    if milei.screen_object.x > goon.screen_object.x - goon.screen_object.w / 2.0
+                        && milei.screen_object.x < goon.screen_object.x + goon.screen_object.w / 2.0
                         && goon.bullet_count < 1
                     {
                         let size = 32.0;
@@ -739,12 +739,12 @@ async fn main() -> Result<(), macroquad::Error> {
                         let h = government_bullet_sprite_h * size / government_bullet_sprite_h;
                         government_bullets.push(GovernmentBullet {
                             goon_id: goon.id,
-                            shape: Shape {
-                                x: goon.shape.x,
-                                y: goon.shape.y + goon.shape.size / 2.0,
+                            screen_object: ScreenObject {
+                                x: goon.screen_object.x,
+                                y: goon.screen_object.y + goon.screen_object.size / 2.0,
                                 w,
                                 h,
-                                speed: goon.shape.speed * 3.0,
+                                speed: goon.screen_object.speed * 3.0,
                                 color: RED,
                                 size,
                                 collided: false,
@@ -755,7 +755,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 for bullet in government_bullets.iter_mut() {
-                    if bullet.shape.collides_with(&milei.shape) {
+                    if bullet.screen_object.collides_with(&milei.screen_object) {
                         if score == high_score {
                             save_high_score(score);
                         }
@@ -764,7 +764,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 government_bullets.retain(|bullet| {
-                    let should_keep = bullet.shape.y < screen_height + bullet.shape.size;
+                    let should_keep = bullet.screen_object.y < screen_height + bullet.screen_object.size;
                     if !should_keep {
                         if let Some(government) = goons
                             .iter_mut()
@@ -777,13 +777,13 @@ async fn main() -> Result<(), macroquad::Error> {
                 });
 
                 goons.retain(|government| {
-                    government.shape.y < screen_height + government.shape.size
+                    government.screen_object.y < screen_height + government.screen_object.size
                 });
                 milei
                     .bullets
                     .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 milei.bullets.retain(|bullet| !bullet.collided);
-                goons.retain(|government| !government.shape.collided);
+                goons.retain(|government| !government.screen_object.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 draw_game_objects(
