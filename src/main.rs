@@ -16,13 +16,14 @@ mod screen_object;
 use crate::screen_object::ScreenObject;
 mod government;
 use crate::government::{Goon, Government, GovernmentBullet, Vastness};
+mod liberty;
+use crate::liberty::{Milei, MileiBullet};
 
 mod simple_logger;
 
 const GAME_TITLE: &str = "¡AFUERA!";
 const MOVEMENT_SPEED: f32 = 400.0;
-const STARFIELD_SPEED: f32 = 0.01;
-const BALL_RADIUS: f32 = 16.0;
+const STARFIELD_SPEED: f32 = 0.25;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
 
 const FRAGMENT_SHADER: &str = include_str!("starfield.glsl");
@@ -40,45 +41,6 @@ fn load_high_score() -> u32 {
         .unwrap_or("0".to_string())
         .parse::<u32>()
         .unwrap()
-}
-
-struct MileiBullet {
-    screen_object: ScreenObject,
-}
-
-struct Milei {
-    screen_object: ScreenObject,
-    bullets: Vec<MileiBullet>,
-    last_bullet_time: f64,
-}
-
-impl Milei {
-    pub fn new(ship_sprite: &AnimatedSprite) -> Self {
-        let milei_size = BALL_RADIUS * 2.0;
-        let ship_sprite_w = ship_sprite.frame().source_rect.w;
-        let ship_sprite_h = ship_sprite.frame().source_rect.h;
-
-        Self {
-            screen_object: ScreenObject {
-                size: milei_size,
-                speed: MOVEMENT_SPEED,
-                x: screen_width() / 2.0,
-                y: screen_height() / 2.0,
-                w: ship_sprite_w * milei_size / ship_sprite_w,
-                h: ship_sprite_h * milei_size / ship_sprite_h,
-                color: GOLD,
-                collided: false,
-            },
-            bullets: vec![],
-            last_bullet_time: get_time(),
-        }
-    }
-
-    pub fn start(&mut self, screen_width: f32, screen_height: f32) {
-        self.bullets.clear();
-        self.screen_object.x = screen_width / 2.0;
-        self.screen_object.y = screen_height - self.screen_object.size;
-    }
 }
 
 enum GameState {
@@ -329,7 +291,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut left_direction_time = get_time();
     let mut right_direction_time = get_time();
 
-    let mut milei = Milei::new(&ship_sprite);
+    let mut milei = Milei::new(&ship_sprite, MOVEMENT_SPEED);
 
     let mut bullet_sprite = AnimatedSprite::new(
         16,
@@ -457,7 +419,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 let (mouse_x, mouse_y) = if has_valid_mouse_position {
                     mouse_position()
                 } else {
-                    (milei.screen_object.x, milei.screen_object.y)
+                    milei.position()
                 };
                 #[cfg(any(target_os = "ios", target_os = "android"))]
                 let dir_x = mouse_x - milei.screen_object.x;
@@ -518,16 +480,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     milei.screen_object.y -= my_movement_speed.min(dir_y.abs());
                 }
 
-                milei.screen_object.x = milei
-                    .screen_object
-                    .x
-                    .min(screen_width - BALL_RADIUS)
-                    .max(0.0 + BALL_RADIUS);
-                milei.screen_object.y = milei
-                    .screen_object
-                    .y
-                    .min(screen_height - BALL_RADIUS)
-                    .max(0.0 + BALL_RADIUS);
+                milei.constrain_to_screen(screen_width, screen_height);
 
                 if get_time() - milei.last_bullet_time > 1.0 / MAX_BULLETS_PER_SECOND {
                     milei.last_bullet_time = get_time();
