@@ -25,23 +25,8 @@ const STARFIELD_SPEED: f32 = 0.01;
 const BALL_RADIUS: f32 = 16.0;
 const MAX_BULLETS_PER_SECOND: f64 = 4.0;
 
-const FRAGMENT_SHADER: &str = include_str!("starfield-shader.glsl");
-
-const VERTEX_SHADER: &str = "#version 100
-attribute vec3 position;
-// attribute vec2 texcoord;
-// attribute vec4 color0;
-varying float iTime;
-
-uniform mat4 Model;
-uniform mat4 Projection;
-uniform vec4 _Time;
-
-void main() {
-    gl_Position = Projection * Model * vec4(position, 1);
-    iTime = _Time.x;
-}
-";
+const FRAGMENT_SHADER: &str = include_str!("starfield.glsl");
+const VERTEX_SHADER: &str = include_str!("vertex.glsl");
 
 fn save_high_score(score: u32) {
     let storage = &mut quad_storage::STORAGE.lock().unwrap();
