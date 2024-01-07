@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 mod ios;
 
 use std::f32::consts::PI;
@@ -58,13 +55,6 @@ fn load_high_score() -> u32 {
         .unwrap_or("0".to_string())
         .parse::<u32>()
         .unwrap()
-}
-
-lazy_static! {
-    static ref GOON_COLORS: Vec<Color> = vec![
-        BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY, GREEN,
-        LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
-    ];
 }
 
 struct Milei {
