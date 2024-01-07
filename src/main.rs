@@ -16,6 +16,8 @@ use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig
 
 mod resources;
 use crate::resources::Resources;
+mod screen_object;
+use crate::screen_object::ScreenObject;
 
 mod simple_logger;
 
@@ -62,39 +64,6 @@ lazy_static! {
         BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY, GREEN,
         LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
     ];
-}
-
-struct ScreenObject {
-    size: f32,
-    speed: f32,
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32,
-    color: Color,
-    collided: bool,
-}
-
-impl ScreenObject {
-    fn collides_with_circle(&self, circle: &ScreenObject) -> bool {
-        let half = self.size / 2.0;
-        let dx = (self.x - circle.x).abs().max(half) - half;
-        let dy = (self.y - circle.y).abs().max(half) - half;
-        dx * dx + dy * dy <= circle.size * circle.size / 4.0
-    }
-
-    fn collides_with(&self, other: &Self) -> bool {
-        self.rect().overlaps(&other.rect())
-    }
-
-    fn rect(&self) -> Rect {
-        Rect {
-            x: self.x - self.size / 2.0,
-            y: self.y - self.size / 2.0,
-            w: self.w,
-            h: self.h,
-        }
-    }
 }
 
 enum Vastness {
