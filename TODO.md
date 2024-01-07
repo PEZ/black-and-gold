@@ -5,3 +5,4 @@
 * [ ] Inflation level
 * [ ] TestFlight
 * [ ] Test on Android
+* [ ] Never ready loading resources on mobile Safari
