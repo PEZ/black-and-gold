@@ -216,7 +216,6 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut high_score: u32 = load_high_score();
     let mut high_score_beaten = false;
 
-    let mut government = Government::new();
     let mut direction_modifier: f32 = 0.0;
     let render_target = render_target(320, 150);
     render_target.texture.set_filter(FilterMode::Nearest);
@@ -331,6 +330,7 @@ async fn main() -> Result<(), macroquad::Error> {
         true,
     );
 
+    let mut government = Government::new(government_small_sprite.clone());
     root_ui().push_skin(&resources.ui_skin);
     let window_size = vec2(370.0, 320.0);
 
@@ -510,11 +510,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     let size = vastness.to_float() * scale;
                     let x = rand::gen_range(size / 2.0, screen_width - size / 2.0);
 
-                    let ship_sprite_w = government_small_sprite.frame().source_rect.w;
-                    let ship_sprite_h = government_small_sprite.frame().source_rect.h;
-                    let w = ship_sprite_w * size / ship_sprite_w;
-                    let h = ship_sprite_h * size / ship_sprite_h;
-                    government.spawn_goon(vastness, size, speed, x, -size, w, h);
+                    government.spawn_goon(vastness, size, speed, x, -size);
                 }
 
                 government.update_goons(delta_time);

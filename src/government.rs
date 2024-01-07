@@ -1,3 +1,4 @@
+use macroquad::experimental::animation::AnimatedSprite;
 use macroquad::prelude::*;
 
 use crate::screen_object::ScreenObject;
@@ -71,27 +72,30 @@ pub struct Government {
     pub goons: Vec<Goon>,
     pub bullets: Vec<GovernmentBullet>,
     next_goon_id: usize,
+    _ship_sprite: AnimatedSprite,
+    ship_sprite_w: f32,
+    ship_sprite_h: f32,
 }
 
 impl Government {
-    pub fn new() -> Self {
+    pub fn new(ship_sprite: AnimatedSprite) -> Self {
+        let ship_sprite_w = ship_sprite.frame().source_rect.w;
+        let ship_sprite_h = ship_sprite.frame().source_rect.h;
+
         Self {
             goons: vec![],
             bullets: vec![],
             next_goon_id: 0,
+            _ship_sprite: ship_sprite,
+            ship_sprite_w,
+            ship_sprite_h,
         }
     }
 
-    pub fn spawn_goon(
-        &mut self,
-        vastness: Vastness,
-        size: f32,
-        speed: f32,
-        x: f32,
-        y: f32,
-        w: f32,
-        h: f32,
-    ) {
+    pub fn spawn_goon(&mut self, vastness: Vastness, size: f32, speed: f32, x: f32, y: f32) {
+        let w = self.ship_sprite_w * size / self.ship_sprite_w;
+        let h = self.ship_sprite_h * size / self.ship_sprite_h;
+
         self.goons.push(Goon {
             id: self.next_goon_id,
             vastness,
@@ -111,10 +115,10 @@ impl Government {
     }
 
     pub fn start(&mut self) {
-      self.goons.clear();
-      self.bullets.clear();
-      self.next_goon_id = 0;
-  }
+        self.goons.clear();
+        self.bullets.clear();
+        self.next_goon_id = 0;
+    }
 
     pub fn num_goons(&self) -> usize {
         self.goons.len()
