@@ -52,6 +52,35 @@ struct Milei {
     last_bullet_time: f64,
 }
 
+impl Milei {
+    pub fn new(ship_sprite: &AnimatedSprite) -> Self {
+        let milei_size = BALL_RADIUS * 2.0;
+        let ship_sprite_w = ship_sprite.frame().source_rect.w;
+        let ship_sprite_h = ship_sprite.frame().source_rect.h;
+
+        Self {
+            screen_object: ScreenObject {
+                size: milei_size,
+                speed: MOVEMENT_SPEED,
+                x: screen_width() / 2.0,
+                y: screen_height() / 2.0,
+                w: ship_sprite_w * milei_size / ship_sprite_w,
+                h: ship_sprite_h * milei_size / ship_sprite_h,
+                color: GOLD,
+                collided: false,
+            },
+            bullets: vec![],
+            last_bullet_time: get_time(),
+        }
+    }
+
+    pub fn start(&mut self, screen_width: f32, screen_height: f32) {
+        self.bullets.clear();
+        self.screen_object.x = screen_width / 2.0;
+        self.screen_object.y = screen_height - self.screen_object.size;
+    }
+}
+
 enum GameState {
     MainMenu,
     Playing,
@@ -300,23 +329,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut left_direction_time = get_time();
     let mut right_direction_time = get_time();
 
-    let milei_size = BALL_RADIUS * 2.0;
-    let ship_sprite_w = ship_sprite.frame().source_rect.w;
-    let ship_sprite_h = ship_sprite.frame().source_rect.h;
-    let mut milei = Milei {
-        screen_object: ScreenObject {
-            size: milei_size,
-            speed: MOVEMENT_SPEED,
-            x: screen_width() / 2.0,
-            y: screen_height() / 2.0,
-            w: ship_sprite_w * milei_size / ship_sprite_w,
-            h: ship_sprite_h * milei_size / ship_sprite_h,
-            color: GOLD,
-            collided: false,
-        },
-        bullets: vec![],
-        last_bullet_time: get_time(),
-    };
+    let mut milei = Milei::new(&ship_sprite);
 
     let mut bullet_sprite = AnimatedSprite::new(
         16,
@@ -407,10 +420,8 @@ async fn main() -> Result<(), macroquad::Error> {
                         ui.label(vec2(90.0, -34.0), "Main menu");
                         if ui.button(vec2(66.0, 25.0), "Play") {
                             government.start();
-                            milei.bullets.clear();
+                            milei.start(screen_width, screen_height);
                             explosions.clear();
-                            milei.screen_object.x = screen_width / 2.0;
-                            milei.screen_object.y = screen_height - milei.screen_object.size;
                             game_state = GameState::Playing;
                             has_valid_mouse_position = false;
                             has_started_steering = false;
@@ -641,10 +652,12 @@ async fn main() -> Result<(), macroquad::Error> {
                 government
                     .goons
                     .retain(|goon| goon.screen_object.y < screen_height + goon.screen_object.size);
+                milei.bullets.retain(|bullet| {
+                    bullet.screen_object.y > 0.0 - bullet.screen_object.size / 2.0
+                });
                 milei
                     .bullets
-                    .retain(|bullet| bullet.screen_object.y > 0.0 - bullet.screen_object.size / 2.0);
-                milei.bullets.retain(|bullet| !bullet.screen_object.collided);
+                    .retain(|bullet| !bullet.screen_object.collided);
                 government.goons.retain(|goon| !goon.screen_object.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
