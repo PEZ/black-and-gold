@@ -10,7 +10,6 @@ use macroquad::audio::{play_sound, play_sound_once, set_sound_volume, PlaySoundP
 use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
-use macroquad::rand::ChooseRandom;
 use macroquad::ui::{hash, root_ui};
 use macroquad_particles::{self as particles, AtlasConfig, Emitter, EmitterConfig};
 
@@ -18,6 +17,8 @@ mod resources;
 use crate::resources::Resources;
 mod screen_object;
 use crate::screen_object::ScreenObject;
+mod government;
+use crate::government::{Goon, Government, GovernmentBullet, Vastness};
 
 mod simple_logger;
 
@@ -64,69 +65,6 @@ lazy_static! {
         BEIGE, BLUE, BROWN, DARKBLUE, DARKBROWN, DARKGRAY, DARKGREEN, DARKPURPLE, GRAY, GREEN,
         LIME, MAGENTA, MAROON, ORANGE, PINK, PURPLE, RED, SKYBLUE, VIOLET, YELLOW,
     ];
-}
-
-enum Vastness {
-    XXS = 0,
-    XS = 1,
-    S = 2,
-    M = 3,
-    L = 4,
-    XL = 5,
-    XXL = 6,
-    XXXL = 7,
-    XXXXL = 8,
-    XXXXXL = 9,
-}
-
-impl Vastness {
-    fn from_int(value: usize) -> Option<Self> {
-        match value {
-            0 => Some(Vastness::XXS),
-            1 => Some(Vastness::XS),
-            2 => Some(Vastness::S),
-            3 => Some(Vastness::M),
-            4 => Some(Vastness::L),
-            5 => Some(Vastness::XL),
-            6 => Some(Vastness::XXL),
-            7 => Some(Vastness::XXXL),
-            8 => Some(Vastness::XXXXL),
-            9 => Some(Vastness::XXXXXL),
-            _ => None,
-        }
-    }
-
-    fn to_float(&self) -> f32 {
-        match self {
-            Vastness::XXS => 16.0,
-            Vastness::XS => 20.0,
-            Vastness::S => 24.0,
-            Vastness::M => 28.0,
-            Vastness::L => 32.0,
-            Vastness::XL => 36.0,
-            Vastness::XXL => 40.0,
-            Vastness::XXXL => 48.0,
-            Vastness::XXXXL => 56.0,
-            Vastness::XXXXXL => 64.0,
-        }
-    }
-
-    fn choose_one() -> Self {
-        let value = rand::gen_range(0, 9);
-        Vastness::from_int(value).unwrap()
-    }
-}
-
-struct Goon {
-    id: usize,
-    vastness: Vastness,
-    screen_object: ScreenObject,
-    bullet_count: usize,
-}
-
-struct GovernmentBullet {
-    goon_id: usize,
-    screen_object: ScreenObject,
 }
 
 struct Milei {
@@ -308,10 +246,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut high_score: u32 = load_high_score();
     let mut high_score_beaten = false;
 
-    let mut goons = vec![];
-    let mut next_goon_id = 0;
-    let mut government_bullets: Vec<GovernmentBullet> = vec![];
-
+    let mut government = Government::new();
     let mut direction_modifier: f32 = 0.0;
     let render_target = render_target(320, 150);
     render_target.texture.set_filter(FilterMode::Nearest);
@@ -492,9 +427,8 @@ async fn main() -> Result<(), macroquad::Error> {
                     |ui| {
                         ui.label(vec2(90.0, -34.0), "Main menu");
                         if ui.button(vec2(66.0, 25.0), "Play") {
-                            goons.clear();
+                            government.start();
                             milei.bullets.clear();
-                            government_bullets.clear();
                             explosions.clear();
                             milei.screen_object.x = screen_width / 2.0;
                             milei.screen_object.y = screen_height - milei.screen_object.size;
@@ -625,56 +559,38 @@ async fn main() -> Result<(), macroquad::Error> {
                     play_sound_once(&resources.sound_laser);
                 }
 
-                if goons.len() < max_goons && rand::gen_range(0, 99) >= 95 {
+                if government.num_goons() < max_goons && rand::gen_range(0, 99) >= 95 {
                     let vastness = Vastness::choose_one();
+                    let speed = rand::gen_range(50.0, 150.0);
                     let size = vastness.to_float() * scale;
+                    let x = rand::gen_range(size / 2.0, screen_width - size / 2.0);
+                    
                     let ship_sprite_w = government_small_sprite.frame().source_rect.w;
                     let ship_sprite_h = government_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
                     let h = ship_sprite_h * size / ship_sprite_h;
-                    goons.push(Goon {
-                        id: next_goon_id,
-                        vastness,
-                        bullet_count: 0,
-                        screen_object: ScreenObject {
-                            size,
-                            speed: rand::gen_range(50.0, 150.0),
-                            x: rand::gen_range(size / 2.0, screen_width - size / 2.0),
-                            y: -size,
-                            w,
-                            h,
-                            color: *GOON_COLORS.choose().unwrap(),
-                            collided: false,
-                        },
-                    });
-                    next_goon_id += 1;
+                    government.spawn_goon(vastness, size, speed, x, -size, w, h);
                 }
 
-                for goon in &mut goons {
-                    goon.screen_object.y += goon.screen_object.speed * delta_time;
-                }
+                government.update_goons(delta_time);
+                government.update_bullets(delta_time);
+
                 for bullet in &mut milei.bullets {
                     bullet.y -= bullet.speed * delta_time;
-                }
-                for bullet in &mut government_bullets {
-                    bullet.screen_object.y += bullet.screen_object.speed * delta_time;
                 }
 
                 ship_sprite.update();
                 bullet_sprite.update();
                 government_small_sprite.update();
 
-                if goons.iter().any(|goon| {
-                    goon.screen_object
-                        .collides_with_circle(&milei.screen_object)
-                }) {
+                if government.has_hit_screen_object(&milei.screen_object) || government.has_bullet_hit_screen_object(&milei.screen_object) {
                     if score == high_score {
                         save_high_score(score);
                     }
                     game_state = GameState::GameOver;
                 }
 
-                for goon in goons.iter_mut() {
+                for goon in government.goons.iter_mut() {
                     for bullet in milei.bullets.iter_mut() {
                         if bullet.collides_with(&goon.screen_object) {
                             bullet.collided = true;
@@ -707,7 +623,7 @@ async fn main() -> Result<(), macroquad::Error> {
                             government_bullet_sprite.frame().source_rect.h;
                         let w = government_bullet_sprite_w * size / government_bullet_sprite_w;
                         let h = government_bullet_sprite_h * size / government_bullet_sprite_h;
-                        government_bullets.push(GovernmentBullet {
+                        government.bullets.push(GovernmentBullet {
                             goon_id: goon.id,
                             screen_object: ScreenObject {
                                 x: goon.screen_object.x,
@@ -724,20 +640,13 @@ async fn main() -> Result<(), macroquad::Error> {
                     }
                 }
 
-                for bullet in government_bullets.iter_mut() {
-                    if bullet.screen_object.collides_with(&milei.screen_object) {
-                        if score == high_score {
-                            save_high_score(score);
-                        }
-                        game_state = GameState::GameOver;
-                    }
-                }
 
-                government_bullets.retain(|bullet| {
+
+                government.bullets.retain(|bullet| {
                     let should_keep =
                         bullet.screen_object.y < screen_height + bullet.screen_object.size;
                     if !should_keep {
-                        if let Some(goon) = goons.iter_mut().find(|goon| goon.id == bullet.goon_id)
+                        if let Some(goon) = government.goons.iter_mut().find(|goon| goon.id == bullet.goon_id)
                         {
                             goon.bullet_count -= 1;
                         }
@@ -745,17 +654,17 @@ async fn main() -> Result<(), macroquad::Error> {
                     should_keep
                 });
 
-                goons.retain(|goon| goon.screen_object.y < screen_height + goon.screen_object.size);
+                government.goons.retain(|goon| goon.screen_object.y < screen_height + goon.screen_object.size);
                 milei
                     .bullets
                     .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 milei.bullets.retain(|bullet| !bullet.collided);
-                goons.retain(|goon| !goon.screen_object.collided);
+                government.goons.retain(|goon| !goon.screen_object.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 draw_game_objects(
-                    &goons,
-                    &government_bullets,
+                    &government.goons,
+                    &government.bullets,
                     &mut milei,
                     &mut explosions,
                     &bullet_sprite,
@@ -777,8 +686,8 @@ async fn main() -> Result<(), macroquad::Error> {
                     has_valid_mouse_position = true;
                 }
                 draw_game_objects(
-                    &goons,
-                    &government_bullets,
+                    &government.goons,
+                    &government.bullets,
                     &mut milei,
                     &mut explosions,
                     &bullet_sprite,
@@ -805,8 +714,8 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::MainMenu;
                 }
                 draw_game_objects(
-                    &goons,
-                    &government_bullets,
+                    &government.goons,
+                    &government.bullets,
                     &mut milei,
                     &mut explosions,
                     &bullet_sprite,
