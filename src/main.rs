@@ -82,6 +82,7 @@ impl ScreenObject {
         let dy = (self.y - circle.y).abs().max(half) - half;
         dx * dx + dy * dy <= circle.size * circle.size / 4.0
     }
+
     fn collides_with(&self, other: &Self) -> bool {
         self.rect().overlaps(&other.rect())
     }
@@ -147,7 +148,7 @@ impl Vastness {
     }
 }
 
-struct Government {
+struct Goon {
     id: usize,
     vastness: Vastness,
     screen_object: ScreenObject,
@@ -214,7 +215,7 @@ fn particle_explosion() -> particles::EmitterConfig {
 }
 
 fn draw_game_objects(
-    goons: &[Government],
+    goons: &[Goon],
     government_bullets: &[GovernmentBullet],
     milei: &mut Milei,
     explosions: &mut [(Emitter, Vec2)],
@@ -662,7 +663,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     let ship_sprite_h = government_small_sprite.frame().source_rect.h;
                     let w = ship_sprite_w * size / ship_sprite_w;
                     let h = ship_sprite_h * size / ship_sprite_h;
-                    goons.push(Government {
+                    goons.push(Goon {
                         id: next_goon_id,
                         vastness,
                         bullet_count: 0,
@@ -680,8 +681,8 @@ async fn main() -> Result<(), macroquad::Error> {
                     next_goon_id += 1;
                 }
 
-                for government in &mut goons {
-                    government.screen_object.y += government.screen_object.speed * delta_time;
+                for goon in &mut goons {
+                    goon.screen_object.y += goon.screen_object.speed * delta_time;
                 }
                 for bullet in &mut milei.bullets {
                     bullet.y -= bullet.speed * delta_time;
@@ -694,10 +695,10 @@ async fn main() -> Result<(), macroquad::Error> {
                 bullet_sprite.update();
                 government_small_sprite.update();
 
-                if goons
-                    .iter()
-                    .any(|government| government.screen_object.collides_with_circle(&milei.screen_object))
-                {
+                if goons.iter().any(|goon| {
+                    goon.screen_object
+                        .collides_with_circle(&milei.screen_object)
+                }) {
                     if score == high_score {
                         save_high_score(score);
                     }
@@ -764,26 +765,23 @@ async fn main() -> Result<(), macroquad::Error> {
                 }
 
                 government_bullets.retain(|bullet| {
-                    let should_keep = bullet.screen_object.y < screen_height + bullet.screen_object.size;
+                    let should_keep =
+                        bullet.screen_object.y < screen_height + bullet.screen_object.size;
                     if !should_keep {
-                        if let Some(government) = goons
-                            .iter_mut()
-                            .find(|government| government.id == bullet.goon_id)
+                        if let Some(goon) = goons.iter_mut().find(|goon| goon.id == bullet.goon_id)
                         {
-                            government.bullet_count -= 1;
+                            goon.bullet_count -= 1;
                         }
                     }
                     should_keep
                 });
 
-                goons.retain(|government| {
-                    government.screen_object.y < screen_height + government.screen_object.size
-                });
+                goons.retain(|goon| goon.screen_object.y < screen_height + goon.screen_object.size);
                 milei
                     .bullets
                     .retain(|bullet| bullet.y > 0.0 - bullet.size / 2.0);
                 milei.bullets.retain(|bullet| !bullet.collided);
-                goons.retain(|government| !government.screen_object.collided);
+                goons.retain(|goon| !goon.screen_object.collided);
                 explosions.retain(|(explosion, _)| explosion.config.emitting);
 
                 draw_game_objects(
