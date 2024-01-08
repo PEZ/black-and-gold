@@ -26,7 +26,7 @@ impl Resources {
       let goon_small_texture: Texture2D = load_texture("goon-small.png").await?;
       goon_small_texture.set_filter(FilterMode::Nearest);
 
-      let theme_music = load_sound("8bit-spaceshooter.ogg").await?;
+      let theme_music = load_sound("8bit-spaceshooter.wav").await?;
       let sound_explosion = load_sound("explosion.wav").await?;
       let sound_laser = load_sound("laser.wav").await?;
 
