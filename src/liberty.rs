@@ -5,6 +5,13 @@ use crate::screen_object::ScreenObject;
 
 const MILEI_SIZE: f32 = 32.0;
 
+#[derive(PartialEq)]
+pub enum LateralDirection {
+    Left,
+    None,
+    Right,
+}
+
 pub struct MileiBullet {
     pub screen_object: ScreenObject,
 }

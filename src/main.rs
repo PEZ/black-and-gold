@@ -17,7 +17,7 @@ use crate::screen_object::ScreenObject;
 mod government;
 use crate::government::{Goon, Government, GovernmentBullet, Vastness};
 mod liberty;
-use crate::liberty::{Milei, MileiBullet};
+use crate::liberty::{Milei, MileiBullet, LateralDirection};
 
 mod simple_logger;
 
@@ -287,8 +287,8 @@ async fn main() -> Result<(), macroquad::Error> {
         true,
     );
 
-    let mut left_direction_time = get_time();
-    let mut right_direction_time = get_time();
+    let mut last_lateral_direction = LateralDirection::None;
+    let mut changed_direction_time = get_time();
 
     let mut milei = Milei::new(&ship_sprite, MOVEMENT_SPEED);
 
@@ -412,7 +412,7 @@ async fn main() -> Result<(), macroquad::Error> {
                     has_started_steering = true;
                 }
                 let delta_time = get_frame_time();
-                let my_movement_speed = delta_time * MOVEMENT_SPEED;
+                let mut my_movement_speed = delta_time * MOVEMENT_SPEED;
                 let star_movement_speed = delta_time * STARFIELD_SPEED;
 
                 #[cfg(any(target_os = "ios", target_os = "android"))]
@@ -448,30 +448,39 @@ async fn main() -> Result<(), macroquad::Error> {
                     0.0
                 };
 
+                let lateral_direction = if dir_x < 0.0 {
+                    LateralDirection::Left
+                } else if dir_x > 0.0 {
+                    LateralDirection::Right
+                } else {
+                    LateralDirection::None
+                };
+
+                if lateral_direction != last_lateral_direction {
+                    changed_direction_time = get_time();
+                    last_lateral_direction = lateral_direction;
+                }
+
                 ship_sprite.set_animation(0);
-                if is_key_pressed(KeyCode::Left) {
-                    left_direction_time = get_time();
-                }
                 if dir_x < 0.0 {
-                    milei.screen_object.x -= my_movement_speed.min(dir_x.abs());
                     direction_modifier -= star_movement_speed;
-                    ship_sprite.set_animation(if get_time() < left_direction_time + 0.5 {
-                        1
+                    if get_time() < changed_direction_time + 0.5 {
+                        ship_sprite.set_animation(1)
                     } else {
-                        2
-                    });
-                }
-                if is_key_pressed(KeyCode::Right) {
-                    right_direction_time = get_time();
+                        my_movement_speed *= 1.5;
+                        ship_sprite.set_animation(2)
+                    };
+                    milei.screen_object.x -= my_movement_speed.min(dir_x.abs());
                 }
                 if dir_x > 0.0 {
-                    milei.screen_object.x += my_movement_speed.min(dir_x);
                     direction_modifier += star_movement_speed;
-                    ship_sprite.set_animation(if get_time() < right_direction_time + 0.5 {
-                        3
+                    if get_time() < changed_direction_time + 0.5 {
+                        ship_sprite.set_animation(3)
                     } else {
-                        4
-                    });
+                        my_movement_speed *= 1.5;
+                        ship_sprite.set_animation(4);
+                    };
+                    milei.screen_object.x += my_movement_speed.min(dir_x);
                 }
                 if dir_y > 0.0 {
                     milei.screen_object.y += my_movement_speed.min(dir_y);
