@@ -241,13 +241,13 @@ async fn main() -> Result<(), macroquad::Error> {
     Resources::load().await?;
     let resources = storage::get::<Resources>();
 
-    // play_sound(
-    //     &resources.theme_music,
-    //     PlaySoundParams {
-    //         looped: true,
-    //         volume: 0.1,
-    //     },
-    // );
+    play_sound(
+        &resources.theme_music,
+        PlaySoundParams {
+            looped: true,
+            volume: 0.1,
+        },
+    );
 
     let mut ship_sprite = AnimatedSprite::new(
         16,
@@ -368,7 +368,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
         match game_state {
             GameState::MainMenu => {
-                // set_sound_volume(&resources.theme_music, 0.2);
+                set_sound_volume(&resources.theme_music, 0.2);
                 score = 0;
                 high_score_beaten = false;
                 root_ui().window(
@@ -397,7 +397,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_score(score, high_score, high_score_beaten);
             }
             GameState::Playing => {
-                // set_sound_volume(&resources.theme_music, 1.0);
+                set_sound_volume(&resources.theme_music, 1.0);
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Paused;
                 }
@@ -633,7 +633,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_score(score, high_score, high_score_beaten);
             }
             GameState::Paused => {
-                // set_sound_volume(&resources.theme_music, 0.2);
+                set_sound_volume(&resources.theme_music, 0.2);
                 if is_key_pressed(KeyCode::Escape) {
                     game_state = GameState::Playing;
                 }
@@ -666,7 +666,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title();
             }
             GameState::GameOver => {
-                // set_sound_volume(&resources.theme_music, 0.2);
+                set_sound_volume(&resources.theme_music, 0.2);
                 if is_key_pressed(KeyCode::Escape) || is_mouse_button_pressed(MouseButton::Left) {
                     game_state = GameState::MainMenu;
                 }

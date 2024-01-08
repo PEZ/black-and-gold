@@ -9,7 +9,7 @@ pub struct Resources {
   pub bullet_texture: Texture2D,
   pub explosion_texture: Texture2D,
   pub goon_small_texture: Texture2D,
-  // pub theme_music: Sound,
+  pub theme_music: Sound,
   pub sound_explosion: Sound,
   pub sound_laser: Sound,
   pub ui_skin: Skin,
@@ -26,7 +26,7 @@ impl Resources {
       let goon_small_texture: Texture2D = load_texture("goon-small.png").await?;
       goon_small_texture.set_filter(FilterMode::Nearest);
 
-      // let theme_music = load_sound("8bit-spaceshooter.ogg").await?;
+      let theme_music = load_sound("8bit-spaceshooter.ogg").await?;
       let sound_explosion = load_sound("explosion.wav").await?;
       let sound_laser = load_sound("laser.wav").await?;
 
@@ -69,7 +69,7 @@ impl Resources {
           bullet_texture,
           explosion_texture,
           goon_small_texture,
-          // theme_music,
+          theme_music,
           sound_explosion,
           sound_laser,
           ui_skin,
