@@ -49,7 +49,6 @@ impl Milei {
         self.screen_object.y = screen_height - self.screen_object.size;
     }
 
-    #[cfg(any(target_os = "ios", target_os = "android"))]
     pub fn position(&self) -> (f32, f32) {
         (self.screen_object.x, self.screen_object.y)
     }

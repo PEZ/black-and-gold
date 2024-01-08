@@ -17,7 +17,7 @@ use crate::screen_object::ScreenObject;
 mod government;
 use crate::government::{Goon, Government, GovernmentBullet, Vastness};
 mod liberty;
-use crate::liberty::{Milei, MileiBullet, LateralDirection};
+use crate::liberty::{LateralDirection, Milei, MileiBullet};
 
 mod simple_logger;
 
@@ -332,11 +332,17 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut government = Government::new(government_small_sprite.clone());
     root_ui().push_skin(&resources.ui_skin);
-    let window_size = vec2(370.0, 320.0);
+    let window_size = vec2(370.0, 180.0);
 
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     let mut has_valid_mouse_position = false;
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let mut has_valid_mouse_position = true;
 
+    #[cfg(any(target_os = "ios", target_os = "android"))]
     let mut has_started_steering = false;
+    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+    let mut has_started_steering = true;
 
     loop {
         clear_background(BLACK);
@@ -364,8 +370,6 @@ async fn main() -> Result<(), macroquad::Error> {
         );
         gl_use_default_material();
 
-        let mut exit_game = false;
-
         match game_state {
             GameState::MainMenu => {
                 set_sound_volume(&resources.theme_music, 0.2);
@@ -380,16 +384,21 @@ async fn main() -> Result<(), macroquad::Error> {
                     window_size,
                     |ui| {
                         ui.label(vec2(90.0, -34.0), "Main menu");
-                        if ui.button(vec2(66.0, 25.0), "Play") {
+                        if ui.button(vec2(66.0, 8.0), "Play") {
                             government.start();
-                            milei.start(screen_width, screen_height);
+                            milei.start(screen_width, screen_height / 2.0);
                             explosions.clear();
                             game_state = GameState::Playing;
-                            has_valid_mouse_position = false;
-                            has_started_steering = false;
-                        }
-                        if ui.button(vec2(66.0, 125.0), "Exit") {
-                            exit_game = true;
+                            #[cfg(any(target_os = "ios", target_os = "android"))]
+                            {
+                                has_valid_mouse_position = false;
+                                has_started_steering = false;
+                            }
+                            #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                            {
+                                has_valid_mouse_position = true;
+                                has_started_steering = true;
+                            }
                         }
                     },
                 );
@@ -406,7 +415,6 @@ async fn main() -> Result<(), macroquad::Error> {
                     game_state = GameState::Paused;
                     next_frame().await;
                 }
-                #[cfg(any(target_os = "ios", target_os = "android"))]
                 if !has_started_steering && is_mouse_button_pressed(MouseButton::Left) {
                     has_valid_mouse_position = true;
                     has_started_steering = true;
@@ -415,38 +423,23 @@ async fn main() -> Result<(), macroquad::Error> {
                 let mut my_movement_speed = delta_time * MOVEMENT_SPEED;
                 let star_movement_speed = delta_time * STARFIELD_SPEED;
 
-                #[cfg(any(target_os = "ios", target_os = "android"))]
                 let (mouse_x, mouse_y) = if has_valid_mouse_position {
                     mouse_position()
                 } else {
                     milei.position()
                 };
-                #[cfg(any(target_os = "ios", target_os = "android"))]
                 let dir_x = mouse_x - milei.screen_object.x;
                 #[cfg(any(target_os = "ios", target_os = "android"))]
+                let tap_adjusted_height = milei.screen_object.size * 0.75;
+                #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                let tap_adjusted_height = 0.0;
                 let dir_y = mouse_y
                     - milei.screen_object.y
                     - if has_started_steering {
-                        milei.screen_object.size * 0.75
+                        tap_adjusted_height
                     } else {
                         0.0
                     };
-                #[cfg(not(any(target_os = "ios", target_os = "android")))]
-                let dir_x: f32 = if is_key_down(KeyCode::Left) {
-                    -MOVEMENT_SPEED
-                } else if is_key_down(KeyCode::Right) {
-                    MOVEMENT_SPEED
-                } else {
-                    0.0
-                };
-                #[cfg(not(any(target_os = "ios", target_os = "android")))]
-                let dir_y: f32 = if is_key_down(KeyCode::Up) {
-                    -MOVEMENT_SPEED
-                } else if is_key_down(KeyCode::Down) {
-                    MOVEMENT_SPEED
-                } else {
-                    0.0
-                };
 
                 let lateral_direction = if dir_x < 0.0 {
                     LateralDirection::Left
@@ -692,9 +685,6 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_text(game_over_text, text_x, text_y, 32.0, GOLD);
                 draw_game_title();
             }
-        }
-        if exit_game {
-            return Ok(());
         }
         next_frame().await
     }

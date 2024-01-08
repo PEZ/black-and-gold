@@ -1,3 +1,4 @@
+* [ ] Mute when in background on touch
 * [ ] No starfield on iOS
 * [ ] Lives
 * [ ] Health
