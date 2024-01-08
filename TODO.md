@@ -20,3 +20,6 @@
   * Money printing
   * Borrow money
   * Media
+* Opening scene
+  * Captain AnCap
+  * Furious Gorilla
