@@ -18,16 +18,8 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
-      - name: Build
-        run: cargo build --release --target wasm32-unknown-unknown
-
-      - name: Prepare Deployment Directory
-        run: |
-          mkdir -p ./deploy/assets
-          cp ./target/wasm32-unknown-unknown/release/afuera.wasm ./deploy/
-          cp index.html ./deploy/
-          cp -r ./assets ./deploy/
-          cp -r ./js ./deploy/
+      - name: Build to deploy directory
+        run: ./scripts/wasm-build-to-deploy.sh 
 
       - name: List Deployment Files
         run: ls -l ./deploy

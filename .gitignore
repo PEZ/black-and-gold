@@ -6,3 +6,4 @@ ios/Afuera.app/*
 ios/Afuera.ipa
 *.mobileprovision
 MittSpel*.*
+deploy/
