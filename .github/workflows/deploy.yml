@@ -11,17 +11,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: "Restore m2 Cache"
-        uses: "actions/cache@v1"
+      - name: Cache m2
+        uses: "actions/cache@v2"
         with:
           path: "~/.m2/repository"
-          key: "${{ runner.os }}-deps-${{ hashFiles('deps.edn') }}"
+          key: "${{ runner.os }}-deps-${{ hashFiles('bb.edn') }}"
           restore-keys: "${{ runner.os }}-deps-"
 
       - name: Install bb
         uses: DeLaGuardo/setup-clojure@12.1
         with:
           bb: latest
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -30,13 +36,13 @@ jobs:
           target: wasm32-unknown-unknown
           override: true
 
-      - name: Build to deploy directory
+      - name: Build to WASM deploy directory
         run: bb wasm:build-and-deploy 
 
-      - name: List Deployment Files
+      - name: List WASM Deployment Files
         run: ls -l ./deploy
 
-      - name: Deploy
+      - name: Deploy WASM
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
