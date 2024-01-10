@@ -11,11 +11,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: "Restore m2 Cache"
+        uses: "actions/cache@v1"
+        with:
+          path: "~/.m2/repository"
+          key: "${{ runner.os }}-deps-${{ hashFiles('deps.edn') }}"
+          restore-keys: "${{ runner.os }}-deps-"
+
       - name: Install bb
         uses: DeLaGuardo/setup-clojure@12.1
         with:
           bb: latest
-          
+
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
