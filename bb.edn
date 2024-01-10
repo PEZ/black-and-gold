@@ -5,12 +5,27 @@
  :tasks {:requires ([babashka.cli :as cli]
                     [tasks :as t])
          :init (def http-cli-opts (cli/parse-opts *command-line-args* {:coerce {:port :int :headers :edn}}))
-         wasm:build {:task (t/wasm-build)
+         wasm:build {:task t/wasm-build
                      :doc "Builds WASM taget"}
          wasm:deploy {:doc "Sets up WASM deploy directory (build first)"
-                      :task (t/wasm-deploy)}
+                      :task t/wasm-deploy}
          wasm:build-and-deploy {:doc "Builds and sets up WASM deploy directory"
-                                :task (t/wasm-deploy)
+                                :task t/wasm-deploy
                                 :depends [wasm:build]}
          wasm:serve {:doc "Starts the afuera http dev server"
-                     :task (t/wasm-serve http-cli-opts)}}}
+                     :task (t/wasm-serve http-cli-opts)}
+
+         ios:build-to-device {:doc "Builds IOS target and installs on the device"
+                              :task t/ios-build-to-device}
+
+         ios:build-ipa {:doc "Builds and signs and iOS .ipa"
+                        :task t/ios-build-ipa}
+
+         ios:build-to-simulator {:doc "Builds IOS target and installs on the simulator"
+                                 :task t/ios-build-to-simulator}
+
+         ios:validate-ipa {:doc "Validates the iOS .ipa"
+                           :task t/ios-validate-ipa}
+
+         ios:upload-ipa {:doc "Uploads the iOS .ipa to App Store"
+                         :task t/ios-upload-ipa}}}
