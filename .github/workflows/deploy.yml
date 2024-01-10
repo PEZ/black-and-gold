@@ -11,6 +11,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Install bb
+        uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          bb: latest
+          
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -19,7 +24,7 @@ jobs:
           override: true
 
       - name: Build to deploy directory
-        run: ./scripts/wasm-build-to-deploy.sh 
+        run: bb wasm:build-and-deploy 
 
       - name: List Deployment Files
         run: ls -l ./deploy

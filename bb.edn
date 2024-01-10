@@ -1,0 +1,16 @@
+{:min-bb-version "1.3.187"
+ :deps {org.babashka/cli {:mvn/version "0.2.23"}
+        org.babashka/http-server {:mvn/version "0.1.12"}}
+ :paths ["." "bb"]
+ :tasks {:requires ([babashka.cli :as cli]
+                    [tasks :as t])
+         :init (def http-cli-opts (cli/parse-opts *command-line-args* {:coerce {:port :int :headers :edn}}))
+         wasm:build {:task (t/wasm-build)
+                     :doc "Builds WASM taget"}
+         wasm:deploy {:doc "Sets up WASM deploy directory (build first)"
+                      :task (t/wasm-deploy)}
+         wasm:build-and-deploy {:doc "Builds and sets up WASM deploy directory"
+                                :task (t/wasm-deploy)
+                                :depends [wasm:build]}
+         wasm:serve {:doc "Starts the afuera http dev server"
+                     :task (t/wasm-serve http-cli-opts)}}}
