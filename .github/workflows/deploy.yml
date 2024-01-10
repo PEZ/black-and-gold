@@ -18,6 +18,13 @@ jobs:
           key: "${{ runner.os }}-deps-${{ hashFiles('bb.edn') }}"
           restore-keys: "${{ runner.os }}-deps-"
 
+      - name: Cache clojure tools
+        uses: "actions/cache@v2"
+        with:
+          path: "~/.deps.clj"
+          key: "${{ runner.os }}-deps-${{ hashFiles('bb.edn') }}"
+          restore-keys: "${{ runner.os }}-deps-"
+
       - name: Install bb
         uses: DeLaGuardo/setup-clojure@12.1
         with:
