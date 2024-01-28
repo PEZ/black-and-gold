@@ -15,8 +15,13 @@ use macroquad::experimental::coroutines::start_coroutine;
 mod simple_logger;
 
 const GAME_TITLE: &str = "Black & Gold";
-const MOVEMENT_SPEED: f32 = 400.0;
+const MOVEMENT_SPEED: f32 = 0.1;
 const BOARD_TILES_X: usize = 10;
+
+const BOARD_LEFT: f32 = 0.0;
+const BOARD_RIGHT: f32 = 1.0;
+const BOARD_TOP: f32 = 0.0;
+const BOARD_BOTTOM: f32 = 1.0;
 
 struct Resources {
     pub theme_music: Sound,
@@ -92,7 +97,7 @@ struct Ball {
 }
 
 impl Ball {
-    fn new(color: Color) -> Self {
+    fn new(color: Color, x: f32, y: f32) -> Self {
         let directions = vec![
             std::f32::consts::FRAC_PI_4,
             std::f32::consts::FRAC_PI_4 * 3.0,
@@ -105,8 +110,8 @@ impl Ball {
             size: 10.0,
             direction,
             speed: 5.0,
-            x: 0.0,
-            y: 0.0,
+            x,
+            y,
             color,
             collided: false,
         }
@@ -158,10 +163,10 @@ impl Board {
             width: 0.0,
             height: 0.0,
         };
-        
+
         board
     }
-    
+
     fn tile_width(&self) -> f32 {
         self.width / BOARD_TILES_X as f32
     }
@@ -187,19 +192,41 @@ fn draw_board(board: &Board, black: &Ball, gold: &Ball) {
             let y = board.y + xi as f32 * tile_size;
 
             if tile {
-                draw_rectangle(x, y, tile_size, tile_size, gold.color);
+                draw_rectangle(x, y, tile_size, tile_size, WHITE);
             } else {
-                draw_rectangle(x, y, tile_size, tile_size, black.color);
+                draw_rectangle(x, y, tile_size, tile_size, GRAY);
             }
         }
     }
-    draw_circle_100(gold.x, gold.y, gold.size / 2.0, gold.color);
-    draw_circle_100(black.x, black.y, black.size / 2.0, black.color);
+    draw_circle_100(
+        gold.x * board.width + board.x,
+        gold.y * board.height + board.y,
+        gold.size / 2.0,
+        gold.color,
+    );
+    draw_circle_100(
+        black.x * board.width + board.x,
+        black.y * board.height + board.y,
+        black.size / 2.0,
+        black.color,
+    );
 }
 
 enum GameState {
     Starting,
     Playing,
+}
+
+fn move_and_bounce(board: &Board, ball: &mut Ball) {    
+    ball.x += MOVEMENT_SPEED * get_frame_time() * ball.direction.cos();
+    ball.y += MOVEMENT_SPEED * get_frame_time() * ball.direction.sin();
+
+    if ball.x <= BOARD_LEFT || ball.x >= BOARD_RIGHT {
+        ball.direction = std::f32::consts::PI - ball.direction;
+    }
+    else if ball.y <= BOARD_TOP || ball.y >= BOARD_BOTTOM {
+        ball.direction = 2.0 * std::f32::consts::PI - ball.direction;
+    }
 }
 
 #[macroquad::main("Black and Gold", Conf {
@@ -226,8 +253,8 @@ async fn main() -> Result<(), macroquad::Error> {
         },
     );
 
-    let mut gold = Ball::new(GOLD);
-    let mut black = Ball::new(BLACK);
+    let mut gold = Ball::new(GOLD, 0.75, 0.75);
+    let mut black = Ball::new(BLACK, 0.25, 0.25);
 
     let mut board = Board::new();
 
@@ -241,17 +268,13 @@ async fn main() -> Result<(), macroquad::Error> {
         gold.size = board.tile_width();
         black.size = board.tile_width();
 
-        gold.x = board.x + board.width * 3.0 / 4.0 - gold.size / 2.0;
-        gold.y = board.y + board.width * 3.0 / 4.0 - gold.size / 2.0;
-
-        black.x = board.x + board.width / 4.0 - black.size / 2.0;
-        black.y = board.y + board.width / 4.0 - black.size / 2.0;
-
         match game_state {
             GameState::Starting => {
                 draw_game_title();
             }
             GameState::Playing => {
+                move_and_bounce(&board, &mut black);
+                // move_and_bounce(&board, &mut gold);
                 draw_board(&board, &black, &gold);
             }
         }
