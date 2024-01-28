@@ -15,8 +15,8 @@ use macroquad::experimental::coroutines::start_coroutine;
 mod simple_logger;
 
 const GAME_TITLE: &str = "Black & Gold";
-const MOVEMENT_SPEED: f32 = 1.1;
-const BOARD_TILES_X: usize = 15;
+const MOVEMENT_SPEED: f32 = 1.6;
+const BOARD_TILES_X: usize = 25;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
@@ -221,21 +221,20 @@ fn move_and_bounce(board: &Board, ball: &mut Ball) {
 
     if (new_x - radius) < BOARD_LEFT {
         new_x = BOARD_LEFT + radius;
-        ball.direction.0 *= -1.0;
+        ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
     } else if (new_x + radius) > BOARD_RIGHT {
         new_x = BOARD_RIGHT - radius;
-        ball.direction.0 *= -1.0;
+        ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
     }
 
     if (new_y - radius) < BOARD_TOP {
         new_y = BOARD_TOP + radius;
-        ball.direction.1 *= -1.0;
+        ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
     } else if (new_y + radius) > BOARD_BOTTOM {
         new_y = BOARD_BOTTOM - radius;
-        ball.direction.1 *= -1.0;
+        ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
     }
 
-    // Update the ball's position
     ball.x = new_x;
     ball.y = new_y;
 }
