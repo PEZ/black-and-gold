@@ -135,14 +135,15 @@ impl Ball {
 
 struct Board {
     tiles: Vec<Vec<bool>>,
-    size: f32,
+    width: f32,
+    height: f32,
     x: f32,
     y: f32,
 }
 
 impl Board {
     fn new() -> Self {
-        let mut tiles: Vec<Vec<bool>> = (0..BOARD_TILES_X - 1)
+        let tiles: Vec<Vec<bool>> = (0..BOARD_TILES_X - 1)
             .map(|i| {
                 (0..BOARD_TILES_X)
                     .map(|j| j <= BOARD_TILES_X - 2 - i)
@@ -150,14 +151,26 @@ impl Board {
             })
             .collect();
 
-        let screen_width = screen_width();
-        let screen_height = screen_height();
+        let board = Self {
+            tiles,
+            x: 0.0,
+            y: 0.0,
+            width: 0.0,
+            height: 0.0,
+        };
+        
+        board
+    }
+    
+    fn tile_width(&self) -> f32 {
+        self.width / BOARD_TILES_X as f32
+    }
 
-        let size = f32::min(screen_width, screen_height);
-        let x = screen_width / 2.0 - size / 2.0;
-        let y = screen_height / 2.0 - size / 2.0;
-
-        Self { tiles, size, x, y }
+    fn update_size_and_position(&mut self) {
+        self.width = f32::min(screen_width(), screen_height());
+        self.height = self.tile_width() * (BOARD_TILES_X - 1) as f32;
+        self.x = screen_width() / 2.0 - self.width / 2.0;
+        self.y = screen_height() / 2.0 - self.height / 2.0;
     }
 }
 
@@ -166,7 +179,7 @@ pub fn draw_circle_100(x: f32, y: f32, r: f32, color: Color) {
 }
 
 fn draw_board(board: &Board, black: &Ball, gold: &Ball) {
-    let tile_size = board.size / board.tiles.len() as f32;
+    let tile_size = board.tile_width();
 
     for (xi, row) in board.tiles.iter().enumerate() {
         for (yi, &tile) in row.iter().enumerate() {
@@ -223,23 +236,16 @@ async fn main() -> Result<(), macroquad::Error> {
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
 
-        let screen_width = screen_width();
-        let screen_height = screen_height();
+        board.update_size_and_position();
 
-        board.size = f32::min(screen_width, screen_height);
-        board.x = screen_width / 2.0 - board.size / 2.0;
-        board.y = screen_height / 2.0 - board.size / 2.0;
+        gold.size = board.tile_width();
+        black.size = board.tile_width();
 
-        let tile_size: f32 = board.size / BOARD_TILES_X as f32;
+        gold.x = board.x + board.width * 3.0 / 4.0 - gold.size / 2.0;
+        gold.y = board.y + board.width * 3.0 / 4.0 - gold.size / 2.0;
 
-        gold.size = tile_size;
-        black.size = tile_size;
-
-        gold.x = board.x + board.size * 3.0 / 4.0 - gold.size / 2.0;
-        gold.y = board.y + board.size * 3.0 / 4.0 - gold.size / 2.0;
-
-        black.x = board.x + board.size / 4.0 - black.size / 2.0;
-        black.y = board.y + board.size / 4.0 - black.size / 2.0;
+        black.x = board.x + board.width / 4.0 - black.size / 2.0;
+        black.y = board.y + board.width / 4.0 - black.size / 2.0;
 
         match game_state {
             GameState::Starting => {
