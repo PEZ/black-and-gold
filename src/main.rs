@@ -111,12 +111,32 @@ impl Ball {
     }
 }
 
-fn draw_game_objects(
+struct Board {
+    tiles: Vec<Vec<bool>>,
+    size: f32,
+    x: f32,
+    y: f32,
+}
+
+fn draw_board(
+    board: &Board,
     black: &Ball,
     gold: &Ball,
-    board: &Vec<Vec<bool>>,
 ) {
-    
+    let tile_size = board.size / board.tiles.len() as f32;
+
+    for (i, row) in board.tiles.iter().enumerate() {
+        for (j, &tile) in row.iter().enumerate() {
+            let x = board.x + j as f32 * tile_size;
+            let y = board.y + i as f32 * tile_size;
+
+            if tile {
+                draw_rectangle(x, y, tile_size, tile_size, gold.color);
+            } else {
+                draw_rectangle(x, y, tile_size, tile_size, black.color);
+            }
+        }
+    }
 }
     
 enum GameState {
@@ -130,9 +150,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
     simple_logger::setup_logger();
 
-    log::info!("¡AFUERA!");
-
-    let base_width: f32 = 750.0;
+    log::info!("¡Viva la libertad, Carajo!");
 
     set_pc_assets_folder("assets");
 
@@ -165,32 +183,43 @@ async fn main() -> Result<(), macroquad::Error> {
         collided: false,
     };
     
-    let mut board: Vec<Vec<bool>> = vec![vec![false; BOARD_TILES_X]; BOARD_TILES_Y];
+    let mut tiles: Vec<Vec<bool>> = (0..BOARD_TILES_Y).map(|i| {
+        (0..BOARD_TILES_X).map(|j| j <= BOARD_TILES_Y - 1 - i).collect()
+    }).collect();
     
-    let mut game_state = GameState::Starting;
+    let mut board = Board {
+        tiles,
+        size: 0.0,
+        x: 0.0,
+        y: 0.0,
+    };
+    
+    let mut game_state = GameState::Playing;
 
     loop {
-        clear_background(BLACK);
+        clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
 
         let screen_width = screen_width();
         let screen_height = screen_height();
-        let scale_x: f32 = screen_width / base_width as f32;
-        let scale: f32 = scale_x;
 
-        let TILE_SIZE: f32 = screen_width / BOARD_TILES_X as f32;
-        
-        gold.size = TILE_SIZE;
-        black.size = TILE_SIZE;
+        board.size = f32::min(screen_width, screen_height);
+        board.x = screen_width / 2.0 - board.size / 2.0;
+        board.y = screen_height / 2.0 - board.size / 2.0;
+
+        let tile_size: f32 = screen_width / BOARD_TILES_X as f32;
+
+        gold.size = tile_size;
+        black.size = tile_size;
                 
         match game_state {
             GameState::Starting => {
                 draw_game_title();
             }
             GameState::Playing => {
-                draw_game_objects(
+                draw_board(
+                    &board,
                     &black,
                     &gold,
-                    &board,
                 );
             }
         }
