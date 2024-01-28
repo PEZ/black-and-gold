@@ -10,11 +10,11 @@
 
 (def wasm-deploy-dir "deploy")
 
-(def ios-app-name "Afuera")
+(def ios-app-name "BG")
 (def ios-app-folder (fs/path "ios" (str ios-app-name ".app")))
 (def ios-ipa (fs/path "ios" (str ios-app-name ".ipa")))
 
-(def binary-name "afuera")
+(def binary-name "bg")
 
 (defn wasm-build []
   (println "Building wasm target")
@@ -68,7 +68,7 @@
   (fs/copy-tree assets-dir (fs/path ios-app-folder assets-dir))
   (fs/copy (fs/path "target" "x86_64-apple-ios" "release" binary-name) (fs/path ios-app-folder))
   (shell "xcrun" "simctl" "install" "booted" ios-app-folder)
-  (shell "xcrun" "simctl" "launch" "booted" (str "news.afuera." ios-app-name)))
+  (shell "xcrun" "simctl" "launch" "booted" (str "news.bg." ios-app-name)))
 
 (defn- ios-validate-or-upload-ipa [validate-or-upload apple-id password]
   (shell "xcrun" "altool"

@@ -1,9 +1,9 @@
 /target
 highscore.dat
-afuera.wasm
+bg.wasm
 local.data
-ios/Afuera.app/*
-ios/Afuera.ipa
+ios/BG.app/*
+ios/BG.ipa
 *.mobileprovision
 MittSpel*.*
 deploy/

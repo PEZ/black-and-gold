@@ -12,7 +12,7 @@
          wasm:build-and-deploy {:doc "Builds and sets up WASM deploy directory"
                                 :task t/wasm-deploy
                                 :depends [wasm:build]}
-         wasm:serve {:doc "Starts the afuera http dev server"
+         wasm:serve {:doc "Starts the bg http dev server"
                      :task (t/wasm-serve http-cli-opts)}
 
          ios:build-to-device {:doc "Builds IOS target and installs on the device"
