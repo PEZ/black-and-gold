@@ -15,8 +15,8 @@ use macroquad::experimental::coroutines::start_coroutine;
 mod simple_logger;
 
 const GAME_TITLE: &str = "Black & Gold";
-const MOVEMENT_SPEED: f32 = 0.1;
-const BOARD_TILES_X: usize = 10;
+const MOVEMENT_SPEED: f32 = 1.1;
+const BOARD_TILES_X: usize = 15;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
@@ -88,7 +88,7 @@ fn draw_game_title() {
 
 struct Ball {
     size: f32,
-    direction: f32,
+    direction: (f32, f32),
     speed: f32,
     x: f32,
     y: f32,
@@ -98,17 +98,11 @@ struct Ball {
 
 impl Ball {
     fn new(color: Color, x: f32, y: f32) -> Self {
-        let directions = vec![
-            std::f32::consts::FRAC_PI_4,
-            std::f32::consts::FRAC_PI_4 * 3.0,
-            std::f32::consts::FRAC_PI_4 * 5.0,
-            std::f32::consts::FRAC_PI_4 * 7.0,
-        ];
-        let direction = *rand::ChooseRandom::choose(&directions).unwrap();
-
+        let direction_x = if rand::gen_range(0, 2) == 0 { -1.0 } else { 1.0 };
+        let direction_y = if rand::gen_range(0, 2) == 0 { -1.0 } else { 1.0 };
         Self {
             size: 10.0,
-            direction,
+            direction: (direction_x, direction_y),
             speed: 5.0,
             x,
             y,
@@ -217,16 +211,33 @@ enum GameState {
     Playing,
 }
 
-fn move_and_bounce(board: &Board, ball: &mut Ball) {    
-    ball.x += MOVEMENT_SPEED * get_frame_time() * ball.direction.cos();
-    ball.y += MOVEMENT_SPEED * get_frame_time() * ball.direction.sin();
+fn move_and_bounce(board: &Board, ball: &mut Ball) {
+    let frame_time = get_frame_time().min(0.005);
+    let movement = MOVEMENT_SPEED * frame_time;
+    let radius = ball.size / 2.0 / board.width;
 
-    if ball.x <= BOARD_LEFT || ball.x >= BOARD_RIGHT {
-        ball.direction = std::f32::consts::PI - ball.direction;
+    let mut new_x = ball.x + movement * ball.direction.0;
+    let mut new_y = ball.y + movement * ball.direction.1;
+
+    if (new_x - radius) < BOARD_LEFT {
+        new_x = BOARD_LEFT + radius;
+        ball.direction.0 *= -1.0;
+    } else if (new_x + radius) > BOARD_RIGHT {
+        new_x = BOARD_RIGHT - radius;
+        ball.direction.0 *= -1.0;
     }
-    else if ball.y <= BOARD_TOP || ball.y >= BOARD_BOTTOM {
-        ball.direction = 2.0 * std::f32::consts::PI - ball.direction;
+
+    if (new_y - radius) < BOARD_TOP {
+        new_y = BOARD_TOP + radius;
+        ball.direction.1 *= -1.0;
+    } else if (new_y + radius) > BOARD_BOTTOM {
+        new_y = BOARD_BOTTOM - radius;
+        ball.direction.1 *= -1.0;
     }
+
+    // Update the ball's position
+    ball.x = new_x;
+    ball.y = new_y;
 }
 
 #[macroquad::main("Black and Gold", Conf {
@@ -258,7 +269,8 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut board = Board::new();
 
-    let mut game_state = GameState::Playing;
+    let mut game_state = GameState::Starting;
+    let start_time = get_time();
 
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
@@ -268,13 +280,17 @@ async fn main() -> Result<(), macroquad::Error> {
         gold.size = board.tile_width();
         black.size = board.tile_width();
 
+        if get_time() - start_time > 1.0 {
+            game_state = GameState::Playing;
+        }
+
         match game_state {
             GameState::Starting => {
                 draw_game_title();
             }
             GameState::Playing => {
                 move_and_bounce(&board, &mut black);
-                // move_and_bounce(&board, &mut gold);
+                move_and_bounce(&board, &mut gold);
                 draw_board(&board, &black, &gold);
             }
         }
