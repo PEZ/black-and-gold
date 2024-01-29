@@ -15,7 +15,7 @@ use macroquad::experimental::coroutines::start_coroutine;
 mod simple_logger;
 
 const GAME_TITLE: &str = "Black & Gold";
-const MOVEMENT_SPEED: f32 = 1.6;
+const MOVEMENT_SPEED: f32 = 1.1;
 const BOARD_TILES_X: usize = 25;
 
 const BOARD_LEFT: f32 = 0.0;
@@ -93,11 +93,11 @@ struct Ball {
     x: f32,
     y: f32,
     color: Color,
-    collided: bool,
+    bounce_on: bool,
 }
 
 impl Ball {
-    fn new(color: Color, x: f32, y: f32) -> Self {
+    fn new(color: Color, bounce_on: bool, x: f32, y: f32) -> Self {
         let direction_x = if rand::gen_range(0, 2) == 0 { -1.0 } else { 1.0 };
         let direction_y = if rand::gen_range(0, 2) == 0 { -1.0 } else { 1.0 };
         Self {
@@ -107,7 +107,7 @@ impl Ball {
             x,
             y,
             color,
-            collided: false,
+            bounce_on,
         }
     }
 
@@ -165,6 +165,13 @@ impl Board {
         self.width / BOARD_TILES_X as f32
     }
 
+    fn tile_at(&self, x: f32, y: f32) -> bool {
+        let tile_x = (x / self.tile_width()).floor() as usize;
+        let tile_y = (y / self.tile_width()).floor() as usize;
+
+        self.tiles[tile_y][tile_x]
+    }
+    
     fn update_size_and_position(&mut self) {
         self.width = f32::min(screen_width(), screen_height());
         self.height = self.tile_width() * (BOARD_TILES_X - 1) as f32;
@@ -186,9 +193,9 @@ fn draw_board(board: &Board, black: &Ball, gold: &Ball) {
             let y = board.y + xi as f32 * tile_size;
 
             if tile {
-                draw_rectangle(x, y, tile_size, tile_size, WHITE);
+                draw_rectangle(x, y, tile_size, tile_size, GOLD);
             } else {
-                draw_rectangle(x, y, tile_size, tile_size, GRAY);
+                draw_rectangle(x, y, tile_size, tile_size, BLACK);
             }
         }
     }
@@ -211,13 +218,34 @@ enum GameState {
     Playing,
 }
 
-fn move_and_bounce(board: &Board, ball: &mut Ball) {
+fn move_ball(board: &Board, ball: &mut Ball) {
     let frame_time = get_frame_time().min(0.005);
     let movement = MOVEMENT_SPEED * frame_time;
-    let radius = ball.size / 2.0 / board.width;
+    let p_radius =  ball.size / 2.0; 
+    let radius = p_radius / board.width;
 
     let mut new_x = ball.x + movement * ball.direction.0;
     let mut new_y = ball.y + movement * ball.direction.1;
+    
+    let new_px = (new_x * board.width);
+    let new_py = (new_y * board.height);
+    
+    let left_x = if new_px > p_radius { new_px - p_radius } else { 0.0 };
+    let right_x = if new_px + p_radius < board.width { new_px + p_radius } else { board.width - 1.0 };
+    let top_y = if new_py > p_radius { new_py - p_radius } else { 0.0 };
+    let bottom_y = if new_py + p_radius < board.height { new_py + p_radius } else { board.height - 1.0 };
+
+    if ball.bounce_on == board.tile_at(left_x, new_py) {
+        ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+    } else if ball.bounce_on == board.tile_at(right_x, new_py) {
+        ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+    }
+
+    if ball.bounce_on == board.tile_at(new_px, top_y) {
+        ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+    } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
+        ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+    }
 
     if (new_x - radius) < BOARD_LEFT {
         new_x = BOARD_LEFT + radius;
@@ -263,8 +291,8 @@ async fn main() -> Result<(), macroquad::Error> {
         },
     );
 
-    let mut gold = Ball::new(GOLD, 0.75, 0.75);
-    let mut black = Ball::new(BLACK, 0.25, 0.25);
+    let mut gold = Ball::new(GOLD, true, 0.75, 0.75);
+    let mut black = Ball::new(BLACK, false, 0.25, 0.25);
 
     let mut board = Board::new();
 
@@ -288,8 +316,8 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title();
             }
             GameState::Playing => {
-                move_and_bounce(&board, &mut black);
-                move_and_bounce(&board, &mut gold);
+                move_ball(&board, &mut black);
+                move_ball(&board, &mut gold);
                 draw_board(&board, &black, &gold);
             }
         }
