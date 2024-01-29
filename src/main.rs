@@ -82,7 +82,7 @@ fn draw_game_title() {
         draw_text(
             text,
             screen_width() / 2.0 - text_dimensions.width / 2.0,
-            screen_height() / 4.0,
+            screen_height() / 2.0,
             font_size as f32,
             BLACK,
         );
@@ -111,7 +111,7 @@ fn draw_scores(board: &Board) {
     }
     {
         let text = format!("Black: {}", black_score);
-        let font_size = 16;
+        let font_size = 18;
         let text_dimensions = measure_text(&text, None, font_size, 1.0);
         draw_text(
             &text,
@@ -247,7 +247,13 @@ enum GameState {
     Playing,
 }
 
-fn move_ball(board: &mut Board, ball: &mut Ball, tile_sound: &Sound, wall_sound: &Sound, bounce_volume: f32) {
+fn move_ball(
+    board: &mut Board,
+    ball: &mut Ball,
+    tile_sound: &Sound,
+    wall_sound: &Sound,
+    bounce_volume: f32,
+) {
     let frame_time = get_frame_time().min(0.005);
     let movement = MOVEMENT_SPEED * frame_time;
     let p_radius = ball.size / 2.0;
@@ -372,6 +378,44 @@ fn move_ball(board: &mut Board, ball: &mut Ball, tile_sound: &Sound, wall_sound:
     ball.y = new_y;
 }
 
+fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
+    // Draw the button text
+    let font_size = 16;
+    let text_dimensions = measure_text(&text, None, font_size, 1.0);
+    let hitbox = Rect::new(
+        position.x - 2.0,
+        position.y - text_dimensions.height - 2.0,
+        text_dimensions.width + 4.0,
+        text_dimensions.height + 4.0,
+    );
+    draw_rectangle(
+        hitbox.x,
+        hitbox.y,
+        hitbox.w,
+        hitbox.h,
+        BLACK,
+    );
+    draw_text(
+        text,
+        position.x,
+        position.y,
+        font_size as f32,
+        GOLD,
+    );
+    let (mouse_x, mouse_y) = mouse_position();
+    if is_mouse_button_pressed(MouseButton::Left)
+        && mouse_x >= hitbox.x
+        && mouse_x <= hitbox.x + hitbox.w
+        && mouse_y >= hitbox.y
+        && mouse_y <= hitbox.y + hitbox.h
+    {
+        *toggle = !*toggle;
+        return true;
+    }
+
+    false
+}
+
 #[macroquad::main("Black and Gold", Conf {
     sample_count: 4,
     ..Default::default()
@@ -416,12 +460,17 @@ async fn main() -> Result<(), macroquad::Error> {
 
         draw_scores(&board);
 
-        if root_ui().button(
-            Some(Vec2::new(board.x + board.width / 2.0 - 100.0, board.y - 22.0)),
-            format!("Music: {}", if music_on { "On" } else { "Off" }),
-        ) {
-            music_on = !music_on;
-        }
+        draw_toggle_button(
+            Vec2::new(board.x + board.width / 2.0 - 80.0, board.y + board.height + 16.0),
+            &format!("Music: {}", if music_on { "On" } else { "Off" }),
+            &mut music_on,
+        );
+
+        draw_toggle_button(
+            Vec2::new(board.x + board.width / 2.0, board.y + board.height + 16.0),
+            &format!("Sound: {}", if sound_on { "On" } else { "Off" }),
+            &mut sound_on,
+        );
 
         if music_on {
             set_sound_volume(&resources.theme_music, 1.0);
@@ -429,13 +478,6 @@ async fn main() -> Result<(), macroquad::Error> {
             set_sound_volume(&resources.theme_music, 0.0);
         }
 
-        if root_ui().button(
-            Some(Vec2::new(board.x + board.width / 2.0, board.y - 22.0)),
-            format!("Sound: {}", if sound_on { "On" } else { "Off" }),
-        ) {
-            sound_on = !sound_on;
-        }
-        
         if is_mouse_button_pressed(MouseButton::Left) {
             game_state = GameState::Playing;
         }
