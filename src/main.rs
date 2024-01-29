@@ -2,7 +2,7 @@ mod ios;
 
 use std::f32::consts::PI;
 
-use macroquad::audio::{load_sound, play_sound, set_sound_volume, PlaySoundParams, Sound};
+use macroquad::audio::{load_sound, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound};
 
 use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
@@ -22,6 +22,7 @@ const BOARD_BOTTOM: f32 = 1.0;
 
 struct Resources {
     theme_music: Sound,
+    lions: Sound,
     sound_wall: Sound,
     sound_gold: Sound,
     sound_black: Sound,
@@ -30,12 +31,14 @@ struct Resources {
 impl Resources {
     async fn new() -> Result<Resources, macroquad::Error> {
         let theme_music = load_sound("moza-unfinished.wav").await?;
+        let lions = load_sound("lions.wav").await?;
         let sound_wall = load_sound("456563__bumpelsnake__bounce1.wav").await?;
         let sound_gold = load_sound("456564__bumpelsnake__bell2.wav").await?;
         let sound_black = load_sound("456565__bumpelsnake__bell1.wav").await?;
 
         Ok(Resources {
             theme_music,
+            lions,
             sound_wall,
             sound_gold,
             sound_black,
@@ -432,9 +435,9 @@ async fn main() -> Result<(), macroquad::Error> {
     let resources = storage::get::<Resources>();
 
     play_sound(
-        &resources.theme_music,
+        &resources.lions,
         PlaySoundParams {
-            looped: true,
+            looped: false,
             volume: 1.0,
         },
     );
@@ -479,6 +482,14 @@ async fn main() -> Result<(), macroquad::Error> {
 
         if is_mouse_button_pressed(MouseButton::Left) {
             game_state = GameState::Playing;
+            stop_sound(&resources.lions);
+            play_sound(
+                &resources.theme_music,
+                PlaySoundParams {
+                    looped: true,
+                    volume: 1.0,
+                },
+            );        
         }
 
         match game_state {
