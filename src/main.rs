@@ -2,17 +2,18 @@ mod ios;
 
 use std::f32::consts::PI;
 
-use macroquad::audio::{load_sound, play_sound, PlaySoundParams, Sound};
+use macroquad::audio::{load_sound, play_sound, set_sound_volume, PlaySoundParams, Sound};
 
 use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
 
 use macroquad::experimental::coroutines::start_coroutine;
+use macroquad::ui::root_ui;
 
 mod simple_logger;
 
 const GAME_TITLE: &str = "Black & Gold";
-const MOVEMENT_SPEED: f32 = 1.1;
+const MOVEMENT_SPEED: f32 = 2.1;
 const BOARD_TILES_X: usize = 25;
 
 const BOARD_LEFT: f32 = 0.0;
@@ -105,14 +106,8 @@ fn draw_scores(board: &Board) {
     let black_score = board.tiles.iter().flatten().filter(|&&t| !t).count();
     {
         let text = format!("Golden: {}", gold_score);
-        let font_size = 16;
-        draw_text(
-            &text,
-            board.x,
-            board.y - 2.0,
-            font_size as f32,
-            BLACK,
-        );
+        let font_size = 18;
+        draw_text(&text, board.x + 4.0, board.y - 4.0, font_size as f32, BLACK);
     }
     {
         let text = format!("Black: {}", black_score);
@@ -120,8 +115,8 @@ fn draw_scores(board: &Board) {
         let text_dimensions = measure_text(&text, None, font_size, 1.0);
         draw_text(
             &text,
-            board.x + board.width - text_dimensions.width,
-            board.y - 2.0,
+            board.x + board.width - text_dimensions.width - 4.0,
+            board.y - 4.0,
             font_size as f32,
             BLACK,
         );
@@ -207,7 +202,7 @@ impl Board {
     }
 
     fn update_size_and_position(&mut self) {
-        self.width = f32::min(screen_width(), screen_height());
+        self.width = f32::min(screen_width(), screen_height() - 40.0);
         self.height = self.tile_width() * (BOARD_TILES_X - 1) as f32;
         self.x = screen_width() / 2.0 - self.width / 2.0;
         self.y = screen_height() / 2.0 - self.height / 2.0;
@@ -252,8 +247,7 @@ enum GameState {
     Playing,
 }
 
-fn move_ball(board: &mut Board, ball: &mut Ball, tile_sound: &Sound, wall_sound: &Sound) {
-    let bounce_volume = 0.075;
+fn move_ball(board: &mut Board, ball: &mut Ball, tile_sound: &Sound, wall_sound: &Sound, bounce_volume: f32) {
     let frame_time = get_frame_time().min(0.005);
     let movement = MOVEMENT_SPEED * frame_time;
     let p_radius = ball.size / 2.0;
@@ -289,41 +283,89 @@ fn move_ball(board: &mut Board, ball: &mut Ball, tile_sound: &Sound, wall_sound:
     if ball.bounce_on == board.tile_at(left_x, new_py) {
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(left_x, new_py, !ball.bounce_on);
-        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            tile_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     } else if ball.bounce_on == board.tile_at(right_x, new_py) {
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(right_x, new_py, !ball.bounce_on);
-        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            tile_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     }
 
     if ball.bounce_on == board.tile_at(new_px, top_y) {
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, top_y, !ball.bounce_on);
-        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            tile_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
-        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            tile_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     }
 
     if (new_x - radius) < BOARD_LEFT {
         new_x = BOARD_LEFT + radius;
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            wall_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     } else if (new_x + radius) > BOARD_RIGHT {
         new_x = BOARD_RIGHT - radius;
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            wall_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     }
 
     if (new_y - radius) < BOARD_TOP {
         new_y = BOARD_TOP + radius;
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            wall_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     } else if (new_y + radius) > BOARD_BOTTOM {
         new_y = BOARD_BOTTOM - radius;
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
+        play_sound(
+            wall_sound,
+            PlaySoundParams {
+                volume: bounce_volume,
+                looped: false,
+            },
+        );
     }
 
     ball.x = new_x;
@@ -361,6 +403,9 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut game_state = GameState::Starting;
 
+    let mut music_on = true;
+    let mut sound_on = true;
+
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
 
@@ -368,9 +413,29 @@ async fn main() -> Result<(), macroquad::Error> {
 
         gold.size = board.tile_width();
         black.size = board.tile_width();
-        
+
         draw_scores(&board);
 
+        if root_ui().button(
+            Some(Vec2::new(board.x + board.width / 2.0 - 100.0, board.y - 22.0)),
+            format!("Music: {}", if music_on { "On" } else { "Off" }),
+        ) {
+            music_on = !music_on;
+        }
+
+        if music_on {
+            set_sound_volume(&resources.theme_music, 1.0);
+        } else {
+            set_sound_volume(&resources.theme_music, 0.0);
+        }
+
+        if root_ui().button(
+            Some(Vec2::new(board.x + board.width / 2.0, board.y - 22.0)),
+            format!("Sound: {}", if sound_on { "On" } else { "Off" }),
+        ) {
+            sound_on = !sound_on;
+        }
+        
         if is_mouse_button_pressed(MouseButton::Left) {
             game_state = GameState::Playing;
         }
@@ -385,12 +450,14 @@ async fn main() -> Result<(), macroquad::Error> {
                     &mut black,
                     &resources.sound_black,
                     &resources.sound_wall,
+                    if sound_on { 0.05 } else { 0.0 },
                 );
                 move_ball(
                     &mut board,
                     &mut gold,
                     &resources.sound_gold,
                     &resources.sound_wall,
+                    if sound_on { 0.05 } else { 0.0 },
                 );
                 draw_board(&board, &black, &gold);
             }
