@@ -382,7 +382,7 @@ fn move_ball(
 
 fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
     // Draw the button text
-    let font_size = 16;
+    let font_size = 21;
     let text_dimensions = measure_text(&text, None, font_size, 1.0);
     let hitbox = Rect::new(
         position.x - 2.0,
@@ -452,6 +452,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut music_on = true;
     let mut sound_on = true;
 
+    let mut started_music = false;
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
 
@@ -463,7 +464,7 @@ async fn main() -> Result<(), macroquad::Error> {
         draw_scores(&board);
 
         draw_toggle_button(
-            Vec2::new(board.x + board.width / 2.0 - 80.0, board.y + board.height + 16.0),
+            Vec2::new(board.x + board.width / 2.0 - 100.0, board.y + board.height + 16.0),
             &format!("Music: {}", if music_on { "On" } else { "Off" }),
             &mut music_on,
         );
@@ -481,15 +482,18 @@ async fn main() -> Result<(), macroquad::Error> {
         }
 
         if is_mouse_button_pressed(MouseButton::Left) {
-            game_state = GameState::Playing;
             stop_sound(&resources.lions);
-            play_sound(
-                &resources.theme_music,
-                PlaySoundParams {
-                    looped: true,
-                    volume: 1.0,
-                },
-            );        
+            if !started_music {
+                started_music = true;
+                play_sound(
+                    &resources.theme_music,
+                    PlaySoundParams {
+                        looped: true,
+                        volume: 1.0,
+                    },
+                );
+            }
+            game_state = GameState::Playing;
         }
 
         match game_state {
