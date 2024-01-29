@@ -2,11 +2,8 @@ mod ios;
 
 use std::f32::consts::PI;
 
-use macroquad::audio::{
-    load_sound, play_sound, play_sound_once, set_sound_volume, PlaySoundParams, Sound,
-};
+use macroquad::audio::{load_sound, play_sound, PlaySoundParams, Sound};
 
-use macroquad::experimental::animation::{AnimatedSprite, Animation};
 use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
 
@@ -24,21 +21,24 @@ const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
 struct Resources {
-    pub theme_music: Sound,
-    pub sound_explosion: Sound,
-    pub sound_laser: Sound,
+    theme_music: Sound,
+    sound_wall: Sound,
+    sound_gold: Sound,
+    sound_black: Sound,
 }
 
 impl Resources {
     async fn new() -> Result<Resources, macroquad::Error> {
-        let theme_music = load_sound("8bit-spaceshooter.wav").await?;
-        let sound_explosion = load_sound("explosion.wav").await?;
-        let sound_laser = load_sound("laser.wav").await?;
+        let theme_music = load_sound("moza-unfinished.wav").await?;
+        let sound_wall = load_sound("456563__bumpelsnake__bounce1.wav").await?;
+        let sound_gold = load_sound("456564__bumpelsnake__bell2.wav").await?;
+        let sound_black = load_sound("456565__bumpelsnake__bell1.wav").await?;
 
         Ok(Resources {
             theme_music,
-            sound_explosion,
-            sound_laser,
+            sound_wall,
+            sound_gold,
+            sound_black,
         })
     }
 
@@ -74,22 +74,35 @@ fn oscillating_alpha(base_color: Color, cycles_per_second: f32) -> Color {
 }
 
 fn draw_game_title() {
-    let text = GAME_TITLE;
-    let font_size = 48;
-    let text_dimensions = measure_text(text, None, font_size, 1.0);
-    draw_text(
-        text,
-        screen_width() / 2.0 - text_dimensions.width / 2.0,
-        screen_height() / 4.0,
-        font_size as f32,
-        oscillating_alpha(GOLD, 3.0),
-    );
+    {
+        let text = GAME_TITLE;
+        let font_size = 48;
+        let text_dimensions = measure_text(text, None, font_size, 1.0);
+        draw_text(
+            text,
+            screen_width() / 2.0 - text_dimensions.width / 2.0,
+            screen_height() / 4.0,
+            font_size as f32,
+            BLACK,
+        );
+    }
+    {
+        let text = "Click/tap to start";
+        let font_size = 24;
+        let text_dimensions = measure_text(text, None, font_size, 1.0);
+        draw_text(
+            text,
+            screen_width() / 2.0 - text_dimensions.width / 2.0,
+            screen_height() / 4.0 + 60.0,
+            font_size as f32,
+            oscillating_alpha(BLACK, 3.0),
+        );
+    }
 }
 
 struct Ball {
     size: f32,
     direction: (f32, f32),
-    speed: f32,
     x: f32,
     y: f32,
     color: Color,
@@ -98,36 +111,23 @@ struct Ball {
 
 impl Ball {
     fn new(color: Color, bounce_on: bool, x: f32, y: f32) -> Self {
-        let direction_x = if rand::gen_range(0, 2) == 0 { -1.0 } else { 1.0 };
-        let direction_y = if rand::gen_range(0, 2) == 0 { -1.0 } else { 1.0 };
+        let direction_x = if rand::gen_range(0, 2) == 0 {
+            -1.0
+        } else {
+            1.0
+        };
+        let direction_y = if rand::gen_range(0, 2) == 0 {
+            -1.0
+        } else {
+            1.0
+        };
         Self {
             size: 10.0,
             direction: (direction_x, direction_y),
-            speed: 5.0,
             x,
             y,
             color,
             bounce_on,
-        }
-    }
-
-    pub fn collides_with_circle(&self, circle: &Ball) -> bool {
-        let half = self.size / 2.0;
-        let dx = (self.x - circle.x).abs().max(half) - half;
-        let dy = (self.y - circle.y).abs().max(half) - half;
-        dx * dx + dy * dy <= circle.size * circle.size / 4.0
-    }
-
-    pub fn collides_with(&self, other: &Self) -> bool {
-        self.rect().overlaps(&other.rect())
-    }
-
-    fn rect(&self) -> Rect {
-        Rect {
-            x: self.x - self.size / 2.0,
-            y: self.y - self.size / 2.0,
-            w: self.size,
-            h: self.size,
         }
     }
 }
@@ -171,13 +171,13 @@ impl Board {
 
         self.tiles[tile_y][tile_x]
     }
-    
+
     pub fn set_tile_at(&mut self, x: f32, y: f32, v: bool) {
         let tile_x = (x / self.tile_width()).floor() as usize;
         let tile_y = (y / self.tile_width()).floor() as usize;
         self.tiles[tile_y][tile_x] = v;
     }
-    
+
     fn update_size_and_position(&mut self) {
         self.width = f32::min(screen_width(), screen_height());
         self.height = self.tile_width() * (BOARD_TILES_X - 1) as f32;
@@ -224,53 +224,78 @@ enum GameState {
     Playing,
 }
 
-fn move_ball(board: &mut Board, ball: &mut Ball) {
+fn move_ball(board: &mut Board, ball: &mut Ball, tile_sound: &Sound, wall_sound: &Sound) {
+    let bounce_volume = 0.075;
     let frame_time = get_frame_time().min(0.005);
     let movement = MOVEMENT_SPEED * frame_time;
-    let p_radius =  ball.size / 2.0; 
+    let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
 
     let mut new_x = ball.x + movement * ball.direction.0;
     let mut new_y = ball.y + movement * ball.direction.1;
-    
+
     let new_px = (new_x * board.width);
     let new_py = (new_y * board.height);
-    
-    let left_x = if new_px > p_radius { new_px - p_radius } else { 0.0 };
-    let right_x = if new_px + p_radius < board.width { new_px + p_radius } else { board.width - 1.0 };
-    let top_y = if new_py > p_radius { new_py - p_radius } else { 0.0 };
-    let bottom_y = if new_py + p_radius < board.height { new_py + p_radius } else { board.height - 1.0 };
+
+    let left_x = if new_px > p_radius {
+        new_px - p_radius
+    } else {
+        0.0
+    };
+    let right_x = if new_px + p_radius < board.width {
+        new_px + p_radius
+    } else {
+        board.width - 1.0
+    };
+    let top_y = if new_py > p_radius {
+        new_py - p_radius
+    } else {
+        0.0
+    };
+    let bottom_y = if new_py + p_radius < board.height {
+        new_py + p_radius
+    } else {
+        board.height - 1.0
+    };
 
     if ball.bounce_on == board.tile_at(left_x, new_py) {
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(left_x, new_py, !ball.bounce_on);
+        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     } else if ball.bounce_on == board.tile_at(right_x, new_py) {
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(right_x, new_py, !ball.bounce_on);
+        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     }
-    
+
     if ball.bounce_on == board.tile_at(new_px, top_y) {
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, top_y, !ball.bounce_on);
+        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
+        play_sound(tile_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     }
 
     if (new_x - radius) < BOARD_LEFT {
         new_x = BOARD_LEFT + radius;
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     } else if (new_x + radius) > BOARD_RIGHT {
         new_x = BOARD_RIGHT - radius;
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     }
 
     if (new_y - radius) < BOARD_TOP {
         new_y = BOARD_TOP + radius;
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     } else if (new_y + radius) > BOARD_BOTTOM {
         new_y = BOARD_BOTTOM - radius;
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        play_sound(wall_sound, PlaySoundParams {volume: bounce_volume, looped: false});
     }
 
     ball.x = new_x;
@@ -307,7 +332,6 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut board = Board::new();
 
     let mut game_state = GameState::Starting;
-    let start_time = get_time();
 
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
@@ -317,7 +341,7 @@ async fn main() -> Result<(), macroquad::Error> {
         gold.size = board.tile_width();
         black.size = board.tile_width();
 
-        if get_time() - start_time > 1.0 {
+        if is_mouse_button_pressed(MouseButton::Left) {
             game_state = GameState::Playing;
         }
 
@@ -326,8 +350,18 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title();
             }
             GameState::Playing => {
-                move_ball(&mut board, &mut black);
-                move_ball(&mut board, &mut gold);
+                move_ball(
+                    &mut board,
+                    &mut black,
+                    &resources.sound_black,
+                    &resources.sound_wall,
+                );
+                move_ball(
+                    &mut board,
+                    &mut gold,
+                    &resources.sound_gold,
+                    &resources.sound_wall,
+                );
                 draw_board(&board, &black, &gold);
             }
         }
