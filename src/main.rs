@@ -8,7 +8,6 @@ use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
 
 use macroquad::experimental::coroutines::start_coroutine;
-use macroquad::ui::root_ui;
 
 mod simple_logger;
 
@@ -262,8 +261,8 @@ fn move_ball(
     let mut new_x = ball.x + movement * ball.direction.0;
     let mut new_y = ball.y + movement * ball.direction.1;
 
-    let new_px = (new_x * board.width);
-    let new_py = (new_y * board.height);
+    let new_px = new_x * board.width;
+    let new_py = new_y * board.height;
 
     let left_x = if new_px > p_radius {
         new_px - p_radius
