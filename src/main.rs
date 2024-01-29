@@ -100,6 +100,34 @@ fn draw_game_title() {
     }
 }
 
+fn draw_scores(board: &Board) {
+    let gold_score = board.tiles.iter().flatten().filter(|&&t| t).count();
+    let black_score = board.tiles.iter().flatten().filter(|&&t| !t).count();
+    {
+        let text = format!("Golden: {}", gold_score);
+        let font_size = 16;
+        draw_text(
+            &text,
+            board.x,
+            board.y - 2.0,
+            font_size as f32,
+            BLACK,
+        );
+    }
+    {
+        let text = format!("Black: {}", black_score);
+        let font_size = 16;
+        let text_dimensions = measure_text(&text, None, font_size, 1.0);
+        draw_text(
+            &text,
+            board.x + board.width - text_dimensions.width,
+            board.y - 2.0,
+            font_size as f32,
+            BLACK,
+        );
+    }
+}
+
 struct Ball {
     size: f32,
     direction: (f32, f32),
@@ -340,6 +368,8 @@ async fn main() -> Result<(), macroquad::Error> {
 
         gold.size = board.tile_width();
         black.size = board.tile_width();
+        
+        draw_scores(&board);
 
         if is_mouse_button_pressed(MouseButton::Left) {
             game_state = GameState::Playing;
