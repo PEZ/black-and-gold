@@ -172,6 +172,12 @@ impl Board {
         self.tiles[tile_y][tile_x]
     }
     
+    pub fn set_tile_at(&mut self, x: f32, y: f32, v: bool) {
+        let tile_x = (x / self.tile_width()).floor() as usize;
+        let tile_y = (y / self.tile_width()).floor() as usize;
+        self.tiles[tile_y][tile_x] = v;
+    }
+    
     fn update_size_and_position(&mut self) {
         self.width = f32::min(screen_width(), screen_height());
         self.height = self.tile_width() * (BOARD_TILES_X - 1) as f32;
@@ -218,7 +224,7 @@ enum GameState {
     Playing,
 }
 
-fn move_ball(board: &Board, ball: &mut Ball) {
+fn move_ball(board: &mut Board, ball: &mut Ball) {
     let frame_time = get_frame_time().min(0.005);
     let movement = MOVEMENT_SPEED * frame_time;
     let p_radius =  ball.size / 2.0; 
@@ -237,14 +243,18 @@ fn move_ball(board: &Board, ball: &mut Ball) {
 
     if ball.bounce_on == board.tile_at(left_x, new_py) {
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        board.set_tile_at(left_x, new_py, !ball.bounce_on);
     } else if ball.bounce_on == board.tile_at(right_x, new_py) {
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        board.set_tile_at(right_x, new_py, !ball.bounce_on);
     }
-
+    
     if ball.bounce_on == board.tile_at(new_px, top_y) {
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        board.set_tile_at(new_px, top_y, !ball.bounce_on);
     } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
     }
 
     if (new_x - radius) < BOARD_LEFT {
@@ -316,8 +326,8 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title();
             }
             GameState::Playing => {
-                move_ball(&board, &mut black);
-                move_ball(&board, &mut gold);
+                move_ball(&mut board, &mut black);
+                move_ball(&mut board, &mut gold);
                 draw_board(&board, &black, &gold);
             }
         }
