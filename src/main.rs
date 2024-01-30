@@ -13,7 +13,6 @@ use macroquad::experimental::coroutines::start_coroutine;
 
 mod simple_logger;
 
-const GAME_TITLE: &str = "Black & Gold";
 const MOVEMENT_SPEED: f32 = 2.1;
 const BOARD_TILES_X: usize = 25;
 
@@ -22,7 +21,7 @@ const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 1;
+const NUM_BLACK_BALLS: usize = 50;
 const NUM_GOLD_BALLS: usize = 1;
 
 struct Resources {
@@ -81,17 +80,29 @@ fn oscillating_alpha(base_color: Color, cycles_per_second: f32) -> Color {
     Color::new(base_color.r, base_color.g, base_color.b, alpha)
 }
 
-fn draw_game_title() {
+fn draw_game_title(board: &Board) {
     {
-        let text = GAME_TITLE;
+        let text = "Black";
         let font_size = 48;
         let text_dimensions = measure_text(text, None, font_size, 1.0);
         draw_text(
             text,
-            screen_width() / 2.0 - text_dimensions.width / 2.0,
-            screen_height() / 2.0,
+            board.x + 25.0,
+            board.y + text_dimensions.height + 25.0,
             font_size as f32,
             BLACK,
+        );
+    }
+    {
+        let text = "Gold";
+        let font_size = 48;
+        let text_dimensions = measure_text(text, None, font_size, 1.0);
+        draw_text(
+            text,
+            board.x + board.width - text_dimensions.width - 25.0,
+            board.y + board.height - 25.0,
+            font_size as f32,
+            GOLD,
         );
     }
     {
@@ -101,7 +112,7 @@ fn draw_game_title() {
         draw_text(
             text,
             screen_width() / 2.0 - text_dimensions.width / 2.0,
-            screen_height() / 4.0 + 60.0,
+            board.y + 50.0,
             font_size as f32,
             oscillating_alpha(BLACK, 3.0),
         );
@@ -112,7 +123,7 @@ fn draw_scores(board: &Board) {
     let gold_score = board.tiles.iter().flatten().filter(|&&t| t).count();
     let black_score = board.tiles.iter().flatten().filter(|&&t| !t).count();
     {
-        let text = format!("Golden: {}", gold_score);
+        let text = format!("Gold: {}", gold_score);
         let font_size = 18;
         draw_text(&text, board.x + 4.0, board.y - 4.0, font_size as f32, BLACK);
     }
@@ -440,18 +451,32 @@ async fn main() -> Result<(), macroquad::Error> {
     );
 
     let mut black_balls: Vec<Ball> = (0..NUM_BLACK_BALLS)
-        .map(|_| Ball::new(BLACK, false, 0.25, 0.25))
+        .map(|_| {
+            Ball::new(
+                BLACK,
+                false,
+                0.25 + rand::gen_range(-0.1, 0.1),
+                0.25 + rand::gen_range(-0.1, 0.1),
+            )
+        })
         .collect();
     let mut gold_balls: Vec<Ball> = (0..NUM_GOLD_BALLS)
-        .map(|_| Ball::new(GOLD, true, 0.75, 0.75))
+        .map(|_| {
+            Ball::new(
+                GOLD,
+                true,
+                0.75 + rand::gen_range(-0.1, 0.1),
+                0.75 + rand::gen_range(-0.1, 0.1),
+            )
+        })
         .collect();
 
     let mut board = Board::new();
 
     let mut game_state = GameState::Starting;
 
-    let mut music_on = true;
-    let mut sound_on = true;
+    let mut music_on = false;
+    let mut sound_on = false;
 
     let mut started_music = false;
     loop {
@@ -506,7 +531,8 @@ async fn main() -> Result<(), macroquad::Error> {
 
         match game_state {
             GameState::Starting => {
-                draw_game_title();
+                draw_board(&board, &black_balls, &gold_balls);
+                draw_game_title(&board);
             }
             GameState::Playing => {
                 for ball in black_balls.iter_mut() {
