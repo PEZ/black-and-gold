@@ -13,16 +13,16 @@ use macroquad::experimental::coroutines::start_coroutine;
 
 mod simple_logger;
 
-const MOVEMENT_SPEED: f32 = 2.1;
-const BOARD_TILES_X: usize = 25;
+const MOVEMENT_SPEED: f32 = 1.5;
+const BOARD_TILES_X: usize = 75;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 50;
-const NUM_GOLD_BALLS: usize = 1;
+const NUM_BLACK_BALLS: usize = 100;
+const NUM_GOLD_BALLS: usize = 100;
 
 struct Resources {
     theme_music: Sound,
@@ -276,7 +276,7 @@ fn move_ball(
     wall_sound: &Sound,
     bounce_volume: f32,
 ) {
-    let frame_time = get_frame_time().min(0.005);
+    let frame_time = get_frame_time().min(0.0035);
     let movement = MOVEMENT_SPEED * frame_time;
     let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
@@ -425,9 +425,8 @@ fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
 
     false
 }
-
 #[macroquad::main("Black and Gold", Conf {
-    sample_count: 4,
+    // sample_count: 4,
     ..Default::default()
 })]
 async fn main() -> Result<(), macroquad::Error> {
@@ -476,7 +475,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut game_state = GameState::Starting;
 
     let mut music_on = false;
-    let mut sound_on = false;
+    let mut sound_on = NUM_BLACK_BALLS + NUM_GOLD_BALLS < 10;
 
     let mut started_music = false;
     loop {
@@ -535,20 +534,20 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title(&board);
             }
             GameState::Playing => {
-                for ball in black_balls.iter_mut() {
-                    move_ball(
-                        &mut board,
-                        ball,
-                        &resources.sound_black,
-                        &resources.sound_wall,
-                        if sound_on { 0.05 } else { 0.0 },
-                    );
-                }
                 for ball in gold_balls.iter_mut() {
                     move_ball(
                         &mut board,
                         ball,
                         &resources.sound_gold,
+                        &resources.sound_wall,
+                        if sound_on { 0.05 } else { 0.0 },
+                    );
+                }
+                for ball in black_balls.iter_mut() {
+                    move_ball(
+                        &mut board,
+                        ball,
+                        &resources.sound_black,
                         &resources.sound_wall,
                         if sound_on { 0.05 } else { 0.0 },
                     );
