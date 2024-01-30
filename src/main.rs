@@ -8,20 +8,19 @@ use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
 
 use macroquad::experimental::coroutines::start_coroutine;
-use macroquad::rand::gen_range;
 
 mod simple_logger;
 
-const MOVEMENT_SPEED: f32 = 1.5;
-const BOARD_TILES_X: usize = 75;
+const MOVEMENT_SPEED: f32 = 1.1;
+const BOARD_TILES_X: usize = 100;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 1;
-const NUM_GOLD_BALLS: usize = 1;
+const NUM_BLACK_BALLS: usize = 100;
+const NUM_GOLD_BALLS: usize = 100;
 
 struct Resources {
     theme_music: Sound,
