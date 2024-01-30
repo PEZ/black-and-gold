@@ -2,7 +2,9 @@ mod ios;
 
 use std::f32::consts::PI;
 
-use macroquad::audio::{load_sound, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound};
+use macroquad::audio::{
+    load_sound, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
+};
 
 use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
@@ -19,6 +21,9 @@ const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
+
+const NUM_BLACK_BALLS: usize = 1;
+const NUM_GOLD_BALLS: usize = 1;
 
 struct Resources {
     theme_music: Sound,
@@ -215,7 +220,7 @@ pub fn draw_circle_100(x: f32, y: f32, r: f32, color: Color) {
     draw_poly(x, y, 100, r, 0., color);
 }
 
-fn draw_board(board: &Board, black: &Ball, gold: &Ball) {
+fn draw_board(board: &Board, black_balls: &[Ball], gold_balls: &[Ball]) {
     let tile_size = board.tile_width();
 
     for (xi, row) in board.tiles.iter().enumerate() {
@@ -230,18 +235,22 @@ fn draw_board(board: &Board, black: &Ball, gold: &Ball) {
             }
         }
     }
-    draw_circle_100(
-        gold.x * board.width + board.x,
-        gold.y * board.height + board.y,
-        gold.size / 2.0,
-        gold.color,
-    );
-    draw_circle_100(
-        black.x * board.width + board.x,
-        black.y * board.height + board.y,
-        black.size / 2.0,
-        black.color,
-    );
+    for ball in black_balls.iter() {
+        draw_circle_100(
+            ball.x * board.width + board.x,
+            ball.y * board.height + board.y,
+            ball.size / 2.0,
+            ball.color,
+        );
+    }
+    for ball in gold_balls.iter() {
+        draw_circle_100(
+            ball.x * board.width + board.x,
+            ball.y * board.height + board.y,
+            ball.size / 2.0,
+            ball.color,
+        );
+    }
 }
 
 enum GameState {
@@ -390,20 +399,8 @@ fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
         text_dimensions.width + 4.0,
         text_dimensions.height + 4.0,
     );
-    draw_rectangle(
-        hitbox.x,
-        hitbox.y,
-        hitbox.w,
-        hitbox.h,
-        BLACK,
-    );
-    draw_text(
-        text,
-        position.x,
-        position.y,
-        font_size as f32,
-        GOLD,
-    );
+    draw_rectangle(hitbox.x, hitbox.y, hitbox.w, hitbox.h, BLACK);
+    draw_text(text, position.x, position.y, font_size as f32, GOLD);
     let (mouse_x, mouse_y) = mouse_position();
     if is_mouse_button_pressed(MouseButton::Left)
         && mouse_x >= hitbox.x
@@ -442,8 +439,12 @@ async fn main() -> Result<(), macroquad::Error> {
         },
     );
 
-    let mut gold = Ball::new(GOLD, true, 0.75, 0.75);
-    let mut black = Ball::new(BLACK, false, 0.25, 0.25);
+    let mut black_balls: Vec<Ball> = (0..NUM_BLACK_BALLS)
+        .map(|_| Ball::new(BLACK, false, 0.25, 0.25))
+        .collect();
+    let mut gold_balls: Vec<Ball> = (0..NUM_GOLD_BALLS)
+        .map(|_| Ball::new(GOLD, true, 0.75, 0.75))
+        .collect();
 
     let mut board = Board::new();
 
@@ -458,13 +459,20 @@ async fn main() -> Result<(), macroquad::Error> {
 
         board.update_size_and_position();
 
-        gold.size = board.tile_width();
-        black.size = board.tile_width();
+        for ball in black_balls.iter_mut() {
+            ball.size = board.tile_width();
+        }
+        for ball in gold_balls.iter_mut() {
+            ball.size = board.tile_width();
+        }
 
         draw_scores(&board);
 
         draw_toggle_button(
-            Vec2::new(board.x + board.width / 2.0 - 100.0, board.y + board.height + 16.0),
+            Vec2::new(
+                board.x + board.width / 2.0 - 100.0,
+                board.y + board.height + 16.0,
+            ),
             &format!("Music: {}", if music_on { "On" } else { "Off" }),
             &mut music_on,
         );
@@ -501,21 +509,25 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title();
             }
             GameState::Playing => {
-                move_ball(
-                    &mut board,
-                    &mut black,
-                    &resources.sound_black,
-                    &resources.sound_wall,
-                    if sound_on { 0.05 } else { 0.0 },
-                );
-                move_ball(
-                    &mut board,
-                    &mut gold,
-                    &resources.sound_gold,
-                    &resources.sound_wall,
-                    if sound_on { 0.05 } else { 0.0 },
-                );
-                draw_board(&board, &black, &gold);
+                for ball in black_balls.iter_mut() {
+                    move_ball(
+                        &mut board,
+                        ball,
+                        &resources.sound_black,
+                        &resources.sound_wall,
+                        if sound_on { 0.05 } else { 0.0 },
+                    );
+                }
+                for ball in gold_balls.iter_mut() {
+                    move_ball(
+                        &mut board,
+                        ball,
+                        &resources.sound_gold,
+                        &resources.sound_wall,
+                        if sound_on { 0.05 } else { 0.0 },
+                    );
+                }
+                draw_board(&board, &black_balls, &gold_balls);
             }
         }
 
