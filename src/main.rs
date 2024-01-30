@@ -2,14 +2,13 @@ mod ios;
 
 use std::f32::consts::PI;
 
-use macroquad::audio::{
-    load_sound, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
-};
+use macroquad::audio::{load_sound, play_sound, set_sound_volume, PlaySoundParams, Sound};
 
 use macroquad::experimental::collections::storage;
 use macroquad::prelude::*;
 
 use macroquad::experimental::coroutines::start_coroutine;
+use macroquad::rand::gen_range;
 
 mod simple_logger;
 
@@ -21,8 +20,8 @@ const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 100;
-const NUM_GOLD_BALLS: usize = 100;
+const NUM_BLACK_BALLS: usize = 1;
+const NUM_GOLD_BALLS: usize = 1;
 
 struct Resources {
     theme_music: Sound,
@@ -431,7 +430,7 @@ fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
 })]
 async fn main() -> Result<(), macroquad::Error> {
     rand::srand(miniquad::date::now() as u64);
-
+    
     simple_logger::setup_logger();
 
     log::info!("¡Viva la libertad, Carajo!");
@@ -440,14 +439,6 @@ async fn main() -> Result<(), macroquad::Error> {
 
     Resources::load().await?;
     let resources = storage::get::<Resources>();
-
-    play_sound(
-        &resources.lions,
-        PlaySoundParams {
-            looped: false,
-            volume: 1.0,
-        },
-    );
 
     let mut black_balls: Vec<Ball> = (0..NUM_BLACK_BALLS)
         .map(|_| {
@@ -474,36 +465,41 @@ async fn main() -> Result<(), macroquad::Error> {
 
     let mut game_state = GameState::Starting;
 
-    let mut music_on = false;
+    let mut music_on = true;
     let mut sound_on = NUM_BLACK_BALLS + NUM_GOLD_BALLS < 10;
 
     let mut started_music = false;
+    let mut started_lions = false;
+    let mut lions_start_time = None;
+
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
 
         board.update_size_and_position();
 
         for ball in black_balls.iter_mut() {
-            ball.size = board.tile_width();
+            ball.size = board.tile_width() * 1.0;
         }
         for ball in gold_balls.iter_mut() {
-            ball.size = board.tile_width();
+            ball.size = board.tile_width() * 1.0;
         }
 
         draw_scores(&board);
 
-        draw_toggle_button(
-            Vec2::new(
-                board.x + board.width / 2.0 - 100.0,
-                board.y + board.height + 16.0,
-            ),
-            &format!("Music: {}", if music_on { "On" } else { "Off" }),
-            &mut music_on,
-        );
+        if started_music {
+            draw_toggle_button(
+                Vec2::new(
+                    board.x + board.width / 2.0 - 100.0,
+                    board.y + board.height + 16.0,
+                ),
+                &format!("Music: {}", if music_on { "On" } else { "Off" }),
+                &mut music_on,
+            );
+        }
 
         draw_toggle_button(
             Vec2::new(board.x + board.width / 2.0, board.y + board.height + 16.0),
-            &format!("Sound: {}", if sound_on { "On" } else { "Off" }),
+            &format!("Sound Fx: {}", if sound_on { "On" } else { "Off" }),
             &mut sound_on,
         );
 
@@ -514,20 +510,33 @@ async fn main() -> Result<(), macroquad::Error> {
         }
 
         if is_mouse_button_pressed(MouseButton::Left) {
-            stop_sound(&resources.lions);
-            if !started_music {
-                started_music = true;
+            if !started_lions {
+                started_lions = true;
+                lions_start_time = Some(get_time());
                 play_sound(
-                    &resources.theme_music,
+                    &resources.lions,
                     PlaySoundParams {
-                        looped: true,
+                        looped: false,
                         volume: 1.0,
                     },
                 );
             }
             game_state = GameState::Playing;
         }
-
+        if !started_music {
+            if let Some(start_time) = lions_start_time {
+                if get_time() - start_time >= 15.0 {
+                    started_music = true;
+                    play_sound(
+                        &resources.theme_music,
+                        PlaySoundParams {
+                            looped: true,
+                            volume: 1.0,
+                        },
+                    );
+                }
+            }
+        }
         match game_state {
             GameState::Starting => {
                 draw_board(&board, &black_balls, &gold_balls);

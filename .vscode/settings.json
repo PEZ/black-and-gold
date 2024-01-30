@@ -1,6 +1,8 @@
 {
   "rust-analyzer.showUnlinkedFileNotification": false,
   "cSpell.words": [
-    "objc"
+    "jsutils",
+    "objc",
+    "sapp"
   ]
 }
