@@ -19,8 +19,8 @@ const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 100000;
-const NUM_GOLD_BALLS: usize = 100000;
+const NUM_BLACK_BALLS: usize = 4;
+const NUM_GOLD_BALLS: usize = 2;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
@@ -140,7 +140,7 @@ fn draw_scores(board: &Board) {
     }
 }
 
-struct Ball {
+struct Ball<'a> {
     size: f32,
     direction: (f32, f32),
     speed: f32,
@@ -148,10 +148,11 @@ struct Ball {
     y: f32,
     color: Color,
     bounce_on: bool,
+    bounce_sound: &'a Sound,
 }
 
-impl Ball {
-    fn new(color: Color, bounce_on: bool, x: f32, y: f32) -> Self {
+impl<'a> Ball<'a> {
+    fn new(color: Color, bounce_on: bool, x: f32, y: f32, bounce_sound: &'a Sound) -> Self {
         let direction_x = if rand::gen_range(0, 2) == 0 {
             -1.0
         } else {
@@ -170,6 +171,7 @@ impl Ball {
             y,
             color,
             bounce_on,
+            bounce_sound,
         }
     }
 }
@@ -265,7 +267,6 @@ enum GameState {
 fn move_ball(
     board: &mut Board,
     ball: &mut Ball,
-    tile_sound: &Sound,
     wall_sound: &Sound,
     bounce_volume: f32,
 ) {
@@ -305,7 +306,7 @@ fn move_ball(
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(left_x, new_py, !ball.bounce_on);
         play_sound(
-            tile_sound,
+            &ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -315,7 +316,7 @@ fn move_ball(
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(right_x, new_py, !ball.bounce_on);
         play_sound(
-            tile_sound,
+            &ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -327,7 +328,7 @@ fn move_ball(
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, top_y, !ball.bounce_on);
         play_sound(
-            tile_sound,
+            &ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -337,7 +338,7 @@ fn move_ball(
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
         play_sound(
-            tile_sound,
+            &ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -441,6 +442,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 false,
                 0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
                 0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
+                &resources.sound_black,
             )
         })
         .collect();
@@ -451,6 +453,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 true,
                 0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
                 0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
+                &resources.sound_gold,
             )
         })
         .collect();
@@ -541,20 +544,10 @@ async fn main() -> Result<(), macroquad::Error> {
                     move_ball(
                         &mut board,
                         ball,
-                        &resources.sound_gold,
                         &resources.sound_wall,
                         if sound_on { 0.05 } else { 0.0 },
                     );
                 }
-                // for ball in black_balls.iter_mut() {
-                //     move_ball(
-                //         &mut board,
-                //         ball,
-                //         &resources.sound_black,
-                //         &resources.sound_wall,
-                //         if sound_on { 0.05 } else { 0.0 },
-                //     );
-                // }
                 draw_board(&board, &balls);
             }
         }
