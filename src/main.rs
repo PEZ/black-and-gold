@@ -19,8 +19,8 @@ const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 4;
-const NUM_GOLD_BALLS: usize = 2;
+const NUM_BLACK_BALLS: usize = 250;
+const NUM_GOLD_BALLS: usize = 250;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
