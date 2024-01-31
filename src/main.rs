@@ -11,16 +11,16 @@ use macroquad::experimental::coroutines::start_coroutine;
 
 mod simple_logger;
 
-const MOVEMENT_SPEED: f32 = 1.1;
-const BOARD_TILES_X: usize = 100;
+const MOVEMENT_SPEED: f32 = 1.5;
+const BOARD_TILES_X: usize = 75;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 100;
-const NUM_GOLD_BALLS: usize = 100;
+const NUM_BLACK_BALLS: usize = 200;
+const NUM_GOLD_BALLS: usize = 200;
 
 struct Resources {
     theme_music: Sound,
@@ -142,6 +142,7 @@ fn draw_scores(board: &Board) {
 struct Ball {
     size: f32,
     direction: (f32, f32),
+    speed: f32,
     x: f32,
     y: f32,
     color: Color,
@@ -163,6 +164,7 @@ impl Ball {
         Self {
             size: 10.0,
             direction: (direction_x, direction_y),
+            speed: rand::gen_range(0.75, 1.0),
             x,
             y,
             color,
@@ -275,7 +277,7 @@ fn move_ball(
     bounce_volume: f32,
 ) {
     let frame_time = get_frame_time().min(0.0035);
-    let movement = MOVEMENT_SPEED * frame_time;
+    let movement = MOVEMENT_SPEED * ball.speed * frame_time;
     let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
 
