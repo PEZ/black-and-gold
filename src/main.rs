@@ -19,9 +19,9 @@ const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 200;
-const NUM_GOLD_BALLS: usize = 200;
-const START_FIELD_SIZE: f32 = 0.03;
+const NUM_BLACK_BALLS: usize = 100000;
+const NUM_GOLD_BALLS: usize = 100000;
+const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
     theme_music: Sound,
@@ -232,7 +232,7 @@ pub fn draw_circle_100(x: f32, y: f32, r: f32, color: Color) {
     draw_poly(x, y, 100, r, 0., color);
 }
 
-fn draw_board(board: &Board, black_balls: &[Ball], gold_balls: &[Ball]) {
+fn draw_board(board: &Board, balls: &[&mut Ball]) {
     let tile_size = board.tile_width();
 
     for (xi, row) in board.tiles.iter().enumerate() {
@@ -247,15 +247,7 @@ fn draw_board(board: &Board, black_balls: &[Ball], gold_balls: &[Ball]) {
             }
         }
     }
-    for ball in black_balls.iter() {
-        draw_circle_100(
-            ball.x * board.width + board.x,
-            ball.y * board.height + board.y,
-            ball.size / 2.0,
-            ball.color,
-        );
-    }
-    for ball in gold_balls.iter() {
+    for ball in balls.iter() {
         draw_circle_100(
             ball.x * board.width + board.x,
             ball.y * board.height + board.y,
@@ -462,7 +454,10 @@ async fn main() -> Result<(), macroquad::Error> {
             )
         })
         .collect();
+    use itertools::interleave;
 
+    let mut balls: Vec<_> = interleave(gold_balls.iter_mut(), black_balls.iter_mut()).collect();
+    
     let mut board = Board::new();
 
     let mut game_state = GameState::Starting;
@@ -479,10 +474,7 @@ async fn main() -> Result<(), macroquad::Error> {
 
         board.update_size_and_position();
 
-        for ball in black_balls.iter_mut() {
-            ball.size = board.tile_width() * 1.0;
-        }
-        for ball in gold_balls.iter_mut() {
+        for ball in balls.iter_mut() {
             ball.size = board.tile_width() * 1.0;
         }
 
@@ -541,15 +533,11 @@ async fn main() -> Result<(), macroquad::Error> {
         }
         match game_state {
             GameState::Starting => {
-                draw_board(&board, &black_balls, &gold_balls);
+                draw_board(&board, &balls);
                 draw_game_title(&board);
             }
             GameState::Playing => {
-                use itertools::interleave;
-
-                let mut all_balls: Vec<_> =
-                    interleave(gold_balls.iter_mut(), black_balls.iter_mut()).collect();
-                for ball in all_balls.iter_mut() {
+                for ball in balls.iter_mut() {
                     move_ball(
                         &mut board,
                         ball,
@@ -567,7 +555,7 @@ async fn main() -> Result<(), macroquad::Error> {
                 //         if sound_on { 0.05 } else { 0.0 },
                 //     );
                 // }
-                draw_board(&board, &black_balls, &gold_balls);
+                draw_board(&board, &balls);
             }
         }
 
