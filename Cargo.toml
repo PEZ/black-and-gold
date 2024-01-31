@@ -11,6 +11,7 @@ lazy_static = "1.4"
 notify = "6.1.1"
 # quad-storage = { path = "../quad-storage" }
 log = {version = "0.4.20", features = ["std"] }
+itertools = "0.12.1"
 [target.'cfg(target_os = "ios")'.dependencies]
 oslog = "0.2.0"
 objc = "0.2.7"

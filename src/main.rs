@@ -21,6 +21,7 @@ const BOARD_BOTTOM: f32 = 1.0;
 
 const NUM_BLACK_BALLS: usize = 200;
 const NUM_GOLD_BALLS: usize = 200;
+const START_FIELD_SIZE: f32 = 0.03;
 
 struct Resources {
     theme_music: Sound,
@@ -431,7 +432,7 @@ fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
 })]
 async fn main() -> Result<(), macroquad::Error> {
     rand::srand(miniquad::date::now() as u64);
-    
+
     simple_logger::setup_logger();
 
     log::info!("¡Viva la libertad, Carajo!");
@@ -446,8 +447,8 @@ async fn main() -> Result<(), macroquad::Error> {
             Ball::new(
                 BLACK,
                 false,
-                0.25 + rand::gen_range(-0.1, 0.1),
-                0.25 + rand::gen_range(-0.1, 0.1),
+                0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
+                0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
             )
         })
         .collect();
@@ -456,8 +457,8 @@ async fn main() -> Result<(), macroquad::Error> {
             Ball::new(
                 GOLD,
                 true,
-                0.75 + rand::gen_range(-0.1, 0.1),
-                0.75 + rand::gen_range(-0.1, 0.1),
+                0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
+                0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
             )
         })
         .collect();
@@ -544,7 +545,11 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title(&board);
             }
             GameState::Playing => {
-                for ball in gold_balls.iter_mut() {
+                use itertools::interleave;
+
+                let mut all_balls: Vec<_> =
+                    interleave(gold_balls.iter_mut(), black_balls.iter_mut()).collect();
+                for ball in all_balls.iter_mut() {
                     move_ball(
                         &mut board,
                         ball,
@@ -553,15 +558,15 @@ async fn main() -> Result<(), macroquad::Error> {
                         if sound_on { 0.05 } else { 0.0 },
                     );
                 }
-                for ball in black_balls.iter_mut() {
-                    move_ball(
-                        &mut board,
-                        ball,
-                        &resources.sound_black,
-                        &resources.sound_wall,
-                        if sound_on { 0.05 } else { 0.0 },
-                    );
-                }
+                // for ball in black_balls.iter_mut() {
+                //     move_ball(
+                //         &mut board,
+                //         ball,
+                //         &resources.sound_black,
+                //         &resources.sound_wall,
+                //         if sound_on { 0.05 } else { 0.0 },
+                //     );
+                // }
                 draw_board(&board, &black_balls, &gold_balls);
             }
         }
