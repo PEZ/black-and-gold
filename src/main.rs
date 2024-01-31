@@ -12,15 +12,15 @@ use macroquad::experimental::coroutines::start_coroutine;
 mod simple_logger;
 
 const MOVEMENT_SPEED: f32 = 1.5;
-const BOARD_TILES_X: usize = 75;
+const BOARD_TILES_X: usize = 25;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 250;
-const NUM_GOLD_BALLS: usize = 250;
+const NUM_BLACK_BALLS: usize = 1000;
+const NUM_GOLD_BALLS: usize = 1000;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
