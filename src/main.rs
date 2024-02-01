@@ -9,18 +9,20 @@ use macroquad::prelude::*;
 
 use macroquad::experimental::coroutines::start_coroutine;
 
+use itertools::Itertools;
+
 mod simple_logger;
 
 const MOVEMENT_SPEED: f32 = 1.5;
-const BOARD_TILES_X: usize = 25;
+const BOARD_TILES_X: usize = 50;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 1000;
-const NUM_GOLD_BALLS: usize = 1000;
+const NUM_BLACK_BALLS: usize = 100;
+const NUM_GOLD_BALLS: usize = 100;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
@@ -234,7 +236,7 @@ pub fn draw_circle_100(x: f32, y: f32, r: f32, color: Color) {
     draw_poly(x, y, 100, r, 0., color);
 }
 
-fn draw_board(board: &Board, balls: &[&mut Ball]) {
+fn draw_board(board: &Board, balls: &mut [Ball]) {
     let tile_size = board.tile_width();
 
     for (xi, row) in board.tiles.iter().enumerate() {
@@ -250,10 +252,12 @@ fn draw_board(board: &Board, balls: &[&mut Ball]) {
         }
     }
     for ball in balls.iter() {
-        draw_circle_100(
-            ball.x * board.width + board.x,
-            ball.y * board.height + board.y,
-            ball.size / 2.0,
+        let half_size = ball.size / 2.0;
+        draw_rectangle(
+            ball.x * board.width + board.x - half_size,
+            ball.y * board.height + board.y - half_size,
+            ball.size,
+            ball.size,
             ball.color,
         );
     }
@@ -264,12 +268,7 @@ enum GameState {
     Playing,
 }
 
-fn move_ball(
-    board: &mut Board,
-    ball: &mut Ball,
-    wall_sound: &Sound,
-    bounce_volume: f32,
-) {
+fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volume: f32) {
     let frame_time = get_frame_time().min(0.0035);
     let movement = MOVEMENT_SPEED * ball.speed * frame_time;
     let p_radius = ball.size / 2.0;
@@ -435,7 +434,7 @@ async fn main() -> Result<(), macroquad::Error> {
     Resources::load().await?;
     let resources = storage::get::<Resources>();
 
-    let mut black_balls: Vec<Ball> = (0..NUM_BLACK_BALLS)
+    let black_balls: Vec<Ball> = (0..NUM_BLACK_BALLS)
         .map(|_| {
             Ball::new(
                 BLACK,
@@ -446,7 +445,7 @@ async fn main() -> Result<(), macroquad::Error> {
             )
         })
         .collect();
-    let mut gold_balls: Vec<Ball> = (0..NUM_GOLD_BALLS)
+    let gold_balls: Vec<Ball> = (0..NUM_GOLD_BALLS)
         .map(|_| {
             Ball::new(
                 GOLD,
@@ -457,10 +456,12 @@ async fn main() -> Result<(), macroquad::Error> {
             )
         })
         .collect();
-    use itertools::interleave;
 
-    let mut balls: Vec<_> = interleave(gold_balls.iter_mut(), black_balls.iter_mut()).collect();
-    
+    let mut balls = gold_balls
+        .into_iter()
+        .interleave(black_balls.into_iter())
+        .collect::<Vec<_>>();
+
     let mut board = Board::new();
 
     let mut game_state = GameState::Starting;
@@ -536,7 +537,7 @@ async fn main() -> Result<(), macroquad::Error> {
         }
         match game_state {
             GameState::Starting => {
-                draw_board(&board, &balls);
+                draw_board(&board, &mut balls[..]);
                 draw_game_title(&board);
             }
             GameState::Playing => {
@@ -548,7 +549,7 @@ async fn main() -> Result<(), macroquad::Error> {
                         if sound_on { 0.05 } else { 0.0 },
                     );
                 }
-                draw_board(&board, &balls);
+                draw_board(&board, &mut balls[..]);
             }
         }
 
