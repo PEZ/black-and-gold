@@ -13,8 +13,8 @@ use itertools::Itertools;
 
 mod simple_logger;
 
-const MOVEMENT_SPEED: f32 = 1.5;
-const BOARD_TILES_X: usize = 50;
+const MOVEMENT_SPEED: f32 = 3.3;
+const BOARD_TILES_X: usize = 40;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
