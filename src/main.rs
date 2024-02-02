@@ -15,15 +15,15 @@ use macroquad::rand::ChooseRandom;
 mod simple_logger;
 
 const MAX_SPEED: f32 = 1.0;
-const BOARD_TILES_X: usize = 75;
+const BOARD_TILES_X: usize = 1000;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 3;
-const NUM_GOLD_BALLS: usize = 3;
+const NUM_BLACK_BALLS: usize = 10000;
+const NUM_GOLD_BALLS: usize = 10000;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
