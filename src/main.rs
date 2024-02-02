@@ -10,19 +10,20 @@ use macroquad::prelude::*;
 use macroquad::experimental::coroutines::start_coroutine;
 
 use itertools::Itertools;
+use macroquad::rand::ChooseRandom;
 
 mod simple_logger;
 
 const MAX_SPEED: f32 = 1.0;
-const BOARD_TILES_X: usize = 25;
+const BOARD_TILES_X: usize = 75;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 1;
-const NUM_GOLD_BALLS: usize = 1;
+const NUM_BLACK_BALLS: usize = 150;
+const NUM_GOLD_BALLS: usize = 150;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
@@ -295,99 +296,104 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
     let top_y = (new_py - p_radius).max(0.0);
     let bottom_y = (new_py + p_radius).min(board.height - 1.0);
 
-    if ball.direction.0 < 0.0 {
-        if (new_x - radius) < BOARD_LEFT {
-            new_x = BOARD_LEFT + radius;
-            ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            play_sound(
-                wall_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
-        } else if ball.bounce_on == board.tile_at(left_x, new_py) {
-            ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            board.set_tile_at(left_x, new_py, !ball.bounce_on);
-            play_sound(
-                ball.bounce_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
-        }
-    }
+    let mut directions = vec![(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
+    directions.shuffle();
 
-    if ball.direction.1 < 0.0 {
-        if (new_y - radius) < BOARD_TOP {
-            new_y = BOARD_TOP + radius;
-            ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            play_sound(
-                wall_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
-        } else if ball.bounce_on == board.tile_at(new_px, top_y) {
-            ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            board.set_tile_at(new_px, top_y, !ball.bounce_on);
-            play_sound(
-                ball.bounce_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
+    for (dx, dy) in &directions {
+        if ball.direction.0 * dx < 0.0 {
+            if (new_x - radius) < BOARD_LEFT {
+                new_x = BOARD_LEFT + radius;
+                ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                play_sound(
+                    wall_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            } else if ball.bounce_on == board.tile_at(left_x, new_py) {
+                ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                board.set_tile_at(left_x, new_py, !ball.bounce_on);
+                play_sound(
+                    ball.bounce_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            }
         }
-    }
 
-    if ball.direction.0 > 0.0 {
-        if (new_x + radius) > BOARD_RIGHT {
-            new_x = BOARD_RIGHT - radius;
-            ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            play_sound(
-                wall_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
-        } else if ball.bounce_on == board.tile_at(right_x, new_py) {
-            ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            board.set_tile_at(right_x, new_py, !ball.bounce_on);
-            play_sound(
-                ball.bounce_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
+        if ball.direction.1 * dy < 0.0 {
+            if (new_y - radius) < BOARD_TOP {
+                new_y = BOARD_TOP + radius;
+                ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                play_sound(
+                    wall_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            } else if ball.bounce_on == board.tile_at(new_px, top_y) {
+                ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                board.set_tile_at(new_px, top_y, !ball.bounce_on);
+                play_sound(
+                    ball.bounce_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            }
         }
-    }
 
-    if ball.direction.1 > 0.0 {
-        if (new_y + radius) > BOARD_BOTTOM {
-            new_y = BOARD_BOTTOM - radius;
-            ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            play_sound(
-                wall_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
-        } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
-            ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-            board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
-            play_sound(
-                ball.bounce_sound,
-                PlaySoundParams {
-                    volume: bounce_volume,
-                    looped: false,
-                },
-            );
+        if ball.direction.0 * dx > 0.0 {
+            if (new_x + radius) > BOARD_RIGHT {
+                new_x = BOARD_RIGHT - radius;
+                ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                play_sound(
+                    wall_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            } else if ball.bounce_on == board.tile_at(right_x, new_py) {
+                ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                board.set_tile_at(right_x, new_py, !ball.bounce_on);
+                play_sound(
+                    ball.bounce_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            }
+        }
+
+        if ball.direction.1 * dy > 0.0 {
+            if (new_y + radius) > BOARD_BOTTOM {
+                new_y = BOARD_BOTTOM - radius;
+                ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                play_sound(
+                    wall_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
+                ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
+                play_sound(
+                    ball.bounce_sound,
+                    PlaySoundParams {
+                        volume: bounce_volume,
+                        looped: false,
+                    },
+                );
+            }
         }
     }
 
