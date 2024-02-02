@@ -22,8 +22,8 @@ const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 100;
-const NUM_GOLD_BALLS: usize = 100;
+const NUM_BLACK_BALLS: usize = 3;
+const NUM_GOLD_BALLS: usize = 3;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
@@ -155,7 +155,7 @@ fn draw_scores(board: &Board) {
     }
 }
 
-struct Ball<'a> {
+struct Ball {
     size: f32,
     direction: (f32, f32),
     speed: f32,
@@ -163,11 +163,10 @@ struct Ball<'a> {
     y: f32,
     color: Color,
     bounce_on: bool,
-    bounce_sound: &'a Sound,
 }
 
-impl<'a> Ball<'a> {
-    fn new(color: Color, bounce_on: bool, x: f32, y: f32, bounce_sound: &'a Sound) -> Self {
+impl Ball {
+    fn new(color: Color, bounce_on: bool, x: f32, y: f32) -> Self {
         let direction_x = if rand::gen_range(0, 2) == 0 {
             -1.0
         } else {
@@ -186,7 +185,6 @@ impl<'a> Ball<'a> {
             y,
             color,
             bounce_on,
-            bounce_sound,
         }
     }
 }
@@ -279,7 +277,7 @@ enum GameState {
     Playing,
 }
 
-fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volume: f32) {
+fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
     let frame_time = get_frame_time();
     let movement = (MAX_SPEED * ball.speed * frame_time).min(1.0 / (BOARD_TILES_X as f32 * 2.1));
     let p_radius = ball.size / 2.0;
@@ -298,29 +296,20 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
 
     let mut directions = vec![(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
     directions.shuffle();
+    
+    let mut hit_wall = false;
+    let mut hit_tile = false;
 
     for (dx, dy) in &directions {
         if ball.direction.0 * dx < 0.0 {
             if (new_x - radius) < BOARD_LEFT {
                 new_x = BOARD_LEFT + radius;
                 ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                play_sound(
-                    wall_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_wall = true;
             } else if ball.bounce_on == board.tile_at(left_x, new_py) {
                 ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 board.set_tile_at(left_x, new_py, !ball.bounce_on);
-                play_sound(
-                    ball.bounce_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_tile = true;
             }
         }
 
@@ -328,23 +317,11 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
             if (new_y - radius) < BOARD_TOP {
                 new_y = BOARD_TOP + radius;
                 ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                play_sound(
-                    wall_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_wall = true;
             } else if ball.bounce_on == board.tile_at(new_px, top_y) {
                 ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 board.set_tile_at(new_px, top_y, !ball.bounce_on);
-                play_sound(
-                    ball.bounce_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_tile = true;
             }
         }
 
@@ -352,23 +329,11 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
             if (new_x + radius) > BOARD_RIGHT {
                 new_x = BOARD_RIGHT - radius;
                 ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                play_sound(
-                    wall_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_wall = true;
             } else if ball.bounce_on == board.tile_at(right_x, new_py) {
                 ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 board.set_tile_at(right_x, new_py, !ball.bounce_on);
-                play_sound(
-                    ball.bounce_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_tile = true;
             }
         }
 
@@ -376,29 +341,19 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
             if (new_y + radius) > BOARD_BOTTOM {
                 new_y = BOARD_BOTTOM - radius;
                 ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                play_sound(
-                    wall_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_wall = true;
             } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
                 ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
-                play_sound(
-                    ball.bounce_sound,
-                    PlaySoundParams {
-                        volume: bounce_volume,
-                        looped: false,
-                    },
-                );
+                hit_tile = true;
             }
         }
     }
 
     ball.x = new_x;
     ball.y = new_y;
+    
+    (hit_wall, hit_tile)
 }
 
 fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
@@ -449,7 +404,6 @@ async fn main() -> Result<(), macroquad::Error> {
                 false,
                 0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
                 0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
-                &resources.sound_black,
             )
         })
         .collect();
@@ -460,7 +414,6 @@ async fn main() -> Result<(), macroquad::Error> {
                 true,
                 0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
                 0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
-                &resources.sound_gold,
             )
         })
         .collect();
@@ -549,12 +502,41 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title(&board);
             }
             GameState::Playing => {
+                let (mut wall_bounce, mut black_tile_bounce, mut gold_tile_bounce) = (false, false, false);
                 for ball in balls.iter_mut() {
-                    move_ball(
+                    let (hit_wall, hit_tile) = move_ball(
                         &mut board,
-                        ball,
+                        ball
+                    );
+                    wall_bounce = wall_bounce || hit_wall;
+                    black_tile_bounce = black_tile_bounce || hit_tile && !ball.bounce_on;
+                    gold_tile_bounce = gold_tile_bounce || hit_tile && ball.bounce_on;
+                }
+                if wall_bounce && sound_on {
+                    play_sound(
                         &resources.sound_wall,
-                        if sound_on { 0.05 } else { 0.0 },
+                        PlaySoundParams {
+                            looped: false,
+                            volume: 0.2,
+                        },
+                    );
+                }
+                if black_tile_bounce && sound_on {
+                    play_sound(
+                        &resources.sound_black,
+                        PlaySoundParams {
+                            looped: false,
+                            volume: 0.2,
+                        },
+                    );
+                }
+                if gold_tile_bounce && sound_on {
+                    play_sound(
+                        &resources.sound_gold,
+                        PlaySoundParams {
+                            looped: false,
+                            volume: 0.2,
+                        },
                     );
                 }
                 draw_board(&board, &mut balls[..]);
