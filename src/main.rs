@@ -13,18 +13,16 @@ use itertools::Itertools;
 
 mod simple_logger;
 
-const MOVEMENT_SPEED: f32 = 3.3;
-const MAX_FRAME_TIME: f32 = 0.0035;
-
-const BOARD_TILES_X: usize = 40;
+const MAX_SPEED: f32 = 1.0;
+const BOARD_TILES_X: usize = 75;
 
 const BOARD_LEFT: f32 = 0.0;
 const BOARD_RIGHT: f32 = 1.0;
 const BOARD_TOP: f32 = 0.0;
 const BOARD_BOTTOM: f32 = 1.0;
 
-const NUM_BLACK_BALLS: usize = 100;
-const NUM_GOLD_BALLS: usize = 100;
+const NUM_BLACK_BALLS: usize = 50000;
+const NUM_GOLD_BALLS: usize = 50000;
 const START_FIELD_SIZE: f32 = 0.01;
 
 struct Resources {
@@ -137,6 +135,18 @@ fn draw_scores(board: &Board) {
         draw_text(
             &text,
             board.x + board.width - text_dimensions.width - 4.0,
+            board.y - 4.0,
+            font_size as f32,
+            BLACK,
+        );
+    }
+    {
+        let text = format!("fps: {}", get_fps());
+        let font_size = 18;
+        let text_dimensions = measure_text(&text, None, font_size, 1.0);
+        draw_text(
+            &text,
+            board.x + board.width / 2.0 - text_dimensions.width / 2.0,
             board.y - 4.0,
             font_size as f32,
             BLACK,
@@ -269,124 +279,120 @@ enum GameState {
 }
 
 fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volume: f32) {
-    let frame_time = get_frame_time().min(MAX_FRAME_TIME);
-    let movement = MOVEMENT_SPEED * ball.speed * frame_time;
+    let frame_time = get_frame_time();
+    let movement = (MAX_SPEED * ball.speed * frame_time).min(1.0 / (BOARD_TILES_X as f32 * 2.1));
     let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
 
     let mut new_x = ball.x + movement * ball.direction.0;
     let mut new_y = ball.y + movement * ball.direction.1;
 
-    let new_px = new_x * board.width;
-    let new_py = new_y * board.height;
+    let new_px = (new_x * board.width).min(board.width - 1.0);
+    let new_py = (new_y * board.height).min(board.height - 1.0);
+    
+    let left_x = (new_px - p_radius).max(0.0);
+    let right_x = (new_px + p_radius).min(board.width - 1.0);
+    let top_y = (new_py - p_radius).max(0.0);
+    let bottom_y = (new_py + p_radius).min(board.height - 1.0);
 
-    let left_x = if new_px > p_radius {
-        new_px - p_radius
-    } else {
-        0.0
-    };
-    let right_x = if new_px + p_radius < board.width {
-        new_px + p_radius
-    } else {
-        board.width - 1.0
-    };
-    let top_y = if new_py > p_radius {
-        new_py - p_radius
-    } else {
-        0.0
-    };
-    let bottom_y = if new_py + p_radius < board.height {
-        new_py + p_radius
-    } else {
-        board.height - 1.0
-    };
-
-    if ball.bounce_on == board.tile_at(left_x, new_py) {
-        ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        board.set_tile_at(left_x, new_py, !ball.bounce_on);
-        play_sound(
-            ball.bounce_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
-    } else if ball.bounce_on == board.tile_at(right_x, new_py) {
-        ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        board.set_tile_at(right_x, new_py, !ball.bounce_on);
-        play_sound(
-            ball.bounce_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
+    if ball.direction.0 < 0.0 {
+        if ball.bounce_on == board.tile_at(left_x, new_py) {
+            ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+            board.set_tile_at(left_x, new_py, !ball.bounce_on);
+            // play_sound(
+            //     ball.bounce_sound,
+            //     PlaySoundParams {
+            //         volume: bounce_volume,
+            //         looped: false,
+            //     },
+            // );
+        }
     }
 
-    if ball.bounce_on == board.tile_at(new_px, top_y) {
-        ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        board.set_tile_at(new_px, top_y, !ball.bounce_on);
-        play_sound(
-            ball.bounce_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
-    } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
-        ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
-        play_sound(
-            ball.bounce_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
+    if ball.direction.1 < 0.0 {        
+        if ball.bounce_on == board.tile_at(new_px, top_y) {
+            ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+            board.set_tile_at(new_px, top_y, !ball.bounce_on);
+            // play_sound(
+            //     ball.bounce_sound,
+            //     PlaySoundParams {
+            //         volume: bounce_volume,
+            //         looped: false,
+            //     },
+            // );
+        }
+    }
+
+    if ball.direction.0 > 0.0 {        
+        if ball.bounce_on == board.tile_at(right_x, new_py) {
+            ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+            board.set_tile_at(right_x, new_py, !ball.bounce_on);
+            // play_sound(
+            //     ball.bounce_sound,
+            //     PlaySoundParams {
+            //         volume: bounce_volume,
+            //         looped: false,
+            //     },
+            // );
+        }
+    }
+    
+    if ball.direction.1 > 0.0 {        
+        if ball.bounce_on == board.tile_at(new_px, bottom_y) {
+            ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+            board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
+            // play_sound(
+            //     ball.bounce_sound,
+            //     PlaySoundParams {
+            //         volume: bounce_volume,
+            //         looped: false,
+            //     },
+            // );
+        }
     }
 
     if (new_x - radius) < BOARD_LEFT {
         new_x = BOARD_LEFT + radius;
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(
-            wall_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
+        // play_sound(
+        //     wall_sound,
+        //     PlaySoundParams {
+        //         volume: bounce_volume,
+        //         looped: false,
+        //     },
+        // );
     } else if (new_x + radius) > BOARD_RIGHT {
         new_x = BOARD_RIGHT - radius;
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(
-            wall_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
+        // play_sound(
+        //     wall_sound,
+        //     PlaySoundParams {
+        //         volume: bounce_volume,
+        //         looped: false,
+        //     },
+        // );
     }
 
     if (new_y - radius) < BOARD_TOP {
         new_y = BOARD_TOP + radius;
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(
-            wall_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
+        // play_sound(
+        //     wall_sound,
+        //     PlaySoundParams {
+        //         volume: bounce_volume,
+        //         looped: false,
+        //     },
+        // );
     } else if (new_y + radius) > BOARD_BOTTOM {
         new_y = BOARD_BOTTOM - radius;
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-        play_sound(
-            wall_sound,
-            PlaySoundParams {
-                volume: bounce_volume,
-                looped: false,
-            },
-        );
+        // play_sound(
+        //     wall_sound,
+        //     PlaySoundParams {
+        //         volume: bounce_volume,
+        //         looped: false,
+        //     },
+        // );
     }
 
     ball.x = new_x;
