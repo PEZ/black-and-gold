@@ -14,6 +14,8 @@ use itertools::Itertools;
 mod simple_logger;
 
 const MOVEMENT_SPEED: f32 = 3.3;
+const MAX_FRAME_TIME: f32 = 0.0035;
+
 const BOARD_TILES_X: usize = 40;
 
 const BOARD_LEFT: f32 = 0.0;
@@ -196,15 +198,13 @@ impl Board {
             })
             .collect();
 
-        let board = Self {
+        Self {
             tiles,
             x: 0.0,
             y: 0.0,
             width: 0.0,
             height: 0.0,
-        };
-
-        board
+        }
     }
 
     fn tile_width(&self) -> f32 {
@@ -269,7 +269,7 @@ enum GameState {
 }
 
 fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volume: f32) {
-    let frame_time = get_frame_time().min(0.0035);
+    let frame_time = get_frame_time().min(MAX_FRAME_TIME);
     let movement = MOVEMENT_SPEED * ball.speed * frame_time;
     let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
@@ -305,7 +305,7 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
         ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(left_x, new_py, !ball.bounce_on);
         play_sound(
-            &ball.bounce_sound,
+            ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -315,7 +315,7 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
         ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(right_x, new_py, !ball.bounce_on);
         play_sound(
-            &ball.bounce_sound,
+            ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -327,7 +327,7 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
         ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, top_y, !ball.bounce_on);
         play_sound(
-            &ball.bounce_sound,
+            ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -337,7 +337,7 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
         ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
         board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
         play_sound(
-            &ball.bounce_sound,
+            ball.bounce_sound,
             PlaySoundParams {
                 volume: bounce_volume,
                 looped: false,
@@ -396,7 +396,7 @@ fn move_ball(board: &mut Board, ball: &mut Ball, wall_sound: &Sound, bounce_volu
 fn draw_toggle_button(position: Vec2, text: &str, toggle: &mut bool) -> bool {
     // Draw the button text
     let font_size = 21;
-    let text_dimensions = measure_text(&text, None, font_size, 1.0);
+    let text_dimensions = measure_text(text, None, font_size, 1.0);
     let hitbox = Rect::new(
         position.x - 2.0,
         position.y - text_dimensions.height - 2.0,
