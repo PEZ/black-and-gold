@@ -14,17 +14,7 @@ use macroquad::rand::ChooseRandom;
 
 mod simple_logger;
 
-const MAX_SPEED: f32 = 1.0;
-const BOARD_TILES_X: usize = 1000;
-
-const BOARD_LEFT: f32 = 0.0;
-const BOARD_RIGHT: f32 = 1.0;
-const BOARD_TOP: f32 = 0.0;
-const BOARD_BOTTOM: f32 = 1.0;
-
-const NUM_BLACK_BALLS: usize = 10000;
-const NUM_GOLD_BALLS: usize = 10000;
-const START_FIELD_SIZE: f32 = 0.01;
+mod config;
 
 struct Resources {
     theme_music: Sound,
@@ -199,10 +189,10 @@ struct Board {
 
 impl Board {
     fn new() -> Self {
-        let tiles: Vec<Vec<bool>> = (0..BOARD_TILES_X - 1)
+        let tiles: Vec<Vec<bool>> = (0..config::BOARD_TILES_X - 1)
             .map(|i| {
-                (0..BOARD_TILES_X)
-                    .map(|j| j <= BOARD_TILES_X - 2 - i)
+                (0..config::BOARD_TILES_X)
+                    .map(|j| j <= config::BOARD_TILES_X - 2 - i)
                     .collect()
             })
             .collect();
@@ -217,7 +207,7 @@ impl Board {
     }
 
     fn tile_width(&self) -> f32 {
-        self.width / BOARD_TILES_X as f32
+        self.width / config::BOARD_TILES_X as f32
     }
 
     fn tile_at(&self, x: f32, y: f32) -> bool {
@@ -235,7 +225,7 @@ impl Board {
 
     fn update_size_and_position(&mut self) {
         self.width = f32::min(screen_width(), screen_height() - 40.0);
-        self.height = self.tile_width() * (BOARD_TILES_X - 1) as f32;
+        self.height = self.tile_width() * (config::BOARD_TILES_X - 1) as f32;
         self.x = screen_width() / 2.0 - self.width / 2.0;
         self.y = screen_height() / 2.0 - self.height / 2.0;
     }
@@ -247,6 +237,7 @@ pub fn draw_circle_100(x: f32, y: f32, r: f32, color: Color) {
 
 fn draw_board(board: &Board, balls: &mut [Ball]) {
     let tile_size = board.tile_width();
+    draw_rectangle(board.x, board.y, board.width, board.height, BLACK);
 
     for (xi, row) in board.tiles.iter().enumerate() {
         for (yi, &tile) in row.iter().enumerate() {
@@ -255,9 +246,10 @@ fn draw_board(board: &Board, balls: &mut [Ball]) {
 
             if tile {
                 draw_rectangle(x, y, tile_size, tile_size, GOLD);
-            } else {
-                draw_rectangle(x, y, tile_size, tile_size, BLACK);
-            }
+            } 
+            // else {
+            //     draw_rectangle(x, y, tile_size, tile_size, BLACK);
+            // }
         }
     }
     for ball in balls.iter() {
@@ -279,7 +271,7 @@ enum GameState {
 
 fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
     let frame_time = get_frame_time();
-    let movement = (MAX_SPEED * ball.speed * frame_time).min(1.0 / (BOARD_TILES_X as f32 * 2.1));
+    let movement = (config::MAX_SPEED * ball.speed * frame_time).min(1.0 / (config::BOARD_TILES_X as f32 * 2.1));
     let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
 
@@ -302,8 +294,8 @@ fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
 
     for (dx, dy) in &directions {
         if ball.direction.0 * dx < 0.0 {
-            if (new_x - radius) < BOARD_LEFT {
-                new_x = BOARD_LEFT + radius;
+            if (new_x - radius) < config::BOARD_LEFT {
+                new_x = config::BOARD_LEFT + radius;
                 ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
             } else if ball.bounce_on == board.tile_at(left_x, new_py) {
@@ -314,8 +306,8 @@ fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
         }
 
         if ball.direction.1 * dy < 0.0 {
-            if (new_y - radius) < BOARD_TOP {
-                new_y = BOARD_TOP + radius;
+            if (new_y - radius) < config::BOARD_TOP {
+                new_y = config::BOARD_TOP + radius;
                 ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
             } else if ball.bounce_on == board.tile_at(new_px, top_y) {
@@ -326,8 +318,8 @@ fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
         }
 
         if ball.direction.0 * dx > 0.0 {
-            if (new_x + radius) > BOARD_RIGHT {
-                new_x = BOARD_RIGHT - radius;
+            if (new_x + radius) > config::BOARD_RIGHT {
+                new_x = config::BOARD_RIGHT - radius;
                 ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
             } else if ball.bounce_on == board.tile_at(right_x, new_py) {
@@ -338,8 +330,8 @@ fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
         }
 
         if ball.direction.1 * dy > 0.0 {
-            if (new_y + radius) > BOARD_BOTTOM {
-                new_y = BOARD_BOTTOM - radius;
+            if (new_y + radius) > config::BOARD_BOTTOM {
+                new_y = config::BOARD_BOTTOM - radius;
                 ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
             } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
@@ -397,23 +389,23 @@ async fn main() -> Result<(), macroquad::Error> {
     Resources::load().await?;
     let resources = storage::get::<Resources>();
 
-    let black_balls: Vec<Ball> = (0..NUM_BLACK_BALLS)
+    let black_balls: Vec<Ball> = (0..config::NUM_BLACK_BALLS)
         .map(|_| {
             Ball::new(
                 BLACK,
                 false,
-                0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
-                0.25 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
+                0.25 + rand::gen_range(-1.0 * config::START_FIELD_SIZE, config::START_FIELD_SIZE),
+                0.25 + rand::gen_range(-1.0 * config::START_FIELD_SIZE, config::START_FIELD_SIZE),
             )
         })
         .collect();
-    let gold_balls: Vec<Ball> = (0..NUM_GOLD_BALLS)
+    let gold_balls: Vec<Ball> = (0..config::NUM_GOLD_BALLS)
         .map(|_| {
             Ball::new(
                 GOLD,
                 true,
-                0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
-                0.75 + rand::gen_range(-1.0 * START_FIELD_SIZE, START_FIELD_SIZE),
+                0.75 + rand::gen_range(-1.0 * config::START_FIELD_SIZE, config::START_FIELD_SIZE),
+                0.75 + rand::gen_range(-1.0 * config::START_FIELD_SIZE, config::START_FIELD_SIZE),
             )
         })
         .collect();
@@ -428,7 +420,7 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut game_state = GameState::Starting;
 
     let mut music_on = true;
-    let mut sound_on = NUM_BLACK_BALLS + NUM_GOLD_BALLS < 10;
+    let mut sound_on = config::NUM_BLACK_BALLS + config::NUM_GOLD_BALLS < 10;
 
     let mut started_music = false;
     let mut started_lions = false;
