@@ -1,6 +1,6 @@
-pub const BOARD_TILES_X: usize = 250;
-pub const NUM_BLACK_BALLS: usize = 5000;
-pub const NUM_GOLD_BALLS: usize = 5000;
+pub const BOARD_TILES_X: usize = 350;
+pub const NUM_BLACK_BALLS: usize = 10000;
+pub const NUM_GOLD_BALLS: usize = 10000;
 pub const START_FIELD_SIZE: f32 = 0.01;
 
 pub const BOARD_LEFT: f32 = 0.0;

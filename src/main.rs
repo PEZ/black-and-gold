@@ -131,8 +131,11 @@ fn draw_scores(board: &Board) {
             BLACK,
         );
     }
+}
+
+fn draw_fps(board: &Board, fps: f32) {
     {
-        let text = format!("fps: {}", get_fps());
+        let text = format!("fps: {}", fps.round() as i32);
         let font_size = 18;
         let text_dimensions = measure_text(&text, None, font_size, 1.0);
         draw_text(
@@ -210,17 +213,10 @@ impl Board {
         self.width / config::BOARD_TILES_X as f32
     }
 
-    fn tile_at(&self, x: f32, y: f32) -> bool {
-        let tile_x = (x / self.tile_width()).floor() as usize;
-        let tile_y = (y / self.tile_width()).floor() as usize;
-
-        self.tiles[tile_y][tile_x]
-    }
-
-    pub fn set_tile_at(&mut self, x: f32, y: f32, v: bool) {
-        let tile_x = (x / self.tile_width()).floor() as usize;
-        let tile_y = (y / self.tile_width()).floor() as usize;
-        self.tiles[tile_y][tile_x] = v;
+    fn tile_at(&self, x: f32, y: f32, tile_width: f32) -> (usize, usize) {
+        let tile_x = (x / tile_width).floor() as usize;
+        let tile_y = (y / tile_width).floor() as usize;
+        (tile_y, tile_x)
     }
 
     fn update_size_and_position(&mut self) {
@@ -246,7 +242,7 @@ fn draw_board(board: &Board, balls: &mut [Ball]) {
 
             if tile {
                 draw_rectangle(x, y, tile_size, tile_size, GOLD);
-            } 
+            }
             // else {
             //     draw_rectangle(x, y, tile_size, tile_size, BLACK);
             // }
@@ -271,7 +267,8 @@ enum GameState {
 
 fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
     let frame_time = get_frame_time();
-    let movement = (config::MAX_SPEED * ball.speed * frame_time).min(1.0 / (config::BOARD_TILES_X as f32 * 2.1));
+    let movement = (config::MAX_SPEED * ball.speed * frame_time)
+        .min(1.0 / (config::BOARD_TILES_X as f32 * 2.1));
     let p_radius = ball.size / 2.0;
     let radius = p_radius / board.width;
 
@@ -288,44 +285,40 @@ fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
 
     let mut directions = vec![(0.0, -1.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 0.0)];
     directions.shuffle();
-    
+
     let mut hit_wall = false;
     let mut hit_tile = false;
 
-    for (dx, dy) in &directions {
-        if ball.direction.0 * dx < 0.0 {
-            if (new_x - radius) < config::BOARD_LEFT {
-                new_x = config::BOARD_LEFT + radius;
-                ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                hit_wall = true;
-            } else if ball.bounce_on == board.tile_at(left_x, new_py) {
-                ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                board.set_tile_at(left_x, new_py, !ball.bounce_on);
-                hit_tile = true;
-            }
-        }
+    let tile_width = board.tile_width();
 
+    for (dx, dy) in &directions {
         if ball.direction.1 * dy < 0.0 {
             if (new_y - radius) < config::BOARD_TOP {
                 new_y = config::BOARD_TOP + radius;
                 ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
-            } else if ball.bounce_on == board.tile_at(new_px, top_y) {
-                ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                board.set_tile_at(new_px, top_y, !ball.bounce_on);
-                hit_tile = true;
+            } else {
+                let (tile_x, tile_y) = board.tile_at(new_px, top_y, tile_width);
+                if ball.bounce_on == board.tiles[tile_x][tile_y] {
+                    ball.direction.1 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                    board.tiles[tile_x][tile_y] = !ball.bounce_on;
+                    hit_tile = true;
+                }
             }
         }
 
-        if ball.direction.0 * dx > 0.0 {
-            if (new_x + radius) > config::BOARD_RIGHT {
-                new_x = config::BOARD_RIGHT - radius;
-                ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+        if ball.direction.0 * dx < 0.0 {
+            if (new_x - radius) < config::BOARD_LEFT {
+                new_x = config::BOARD_LEFT + radius;
+                ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
-            } else if ball.bounce_on == board.tile_at(right_x, new_py) {
-                ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                board.set_tile_at(right_x, new_py, !ball.bounce_on);
-                hit_tile = true;
+            } else {
+                let (tile_x, tile_y) = board.tile_at(left_x, new_py, tile_width);
+                if ball.bounce_on == board.tiles[tile_x][tile_y] {
+                    ball.direction.0 = 1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                    board.tiles[tile_x][tile_y] = !ball.bounce_on;
+                    hit_tile = true;
+                }
             }
         }
 
@@ -334,17 +327,35 @@ fn move_ball(board: &mut Board, ball: &mut Ball) -> (bool, bool) {
                 new_y = config::BOARD_BOTTOM - radius;
                 ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
                 hit_wall = true;
-            } else if ball.bounce_on == board.tile_at(new_px, bottom_y) {
-                ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
-                board.set_tile_at(new_px, bottom_y, !ball.bounce_on);
-                hit_tile = true;
+            } else {
+                let (tile_x, tile_y) = board.tile_at(new_px, bottom_y, tile_width);
+                if ball.bounce_on == board.tiles[tile_x][tile_y] {
+                    ball.direction.1 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                    board.tiles[tile_x][tile_y] = !ball.bounce_on;
+                    hit_tile = true;
+                }
+            }
+        }
+
+        if ball.direction.0 * dx > 0.0 {
+            if (new_x + radius) > config::BOARD_RIGHT {
+                new_x = config::BOARD_RIGHT - radius;
+                ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                hit_wall = true;
+            } else {
+                let (tile_x, tile_y) = board.tile_at(right_x, new_py, tile_width);
+                if ball.bounce_on == board.tiles[tile_x][tile_y] {
+                    ball.direction.0 = -1.0 * (1.0 + rand::gen_range(-0.1, 0.1));
+                    board.tiles[tile_x][tile_y] = !ball.bounce_on;
+                    hit_tile = true;
+                }
             }
         }
     }
 
     ball.x = new_x;
     ball.y = new_y;
-    
+
     (hit_wall, hit_tile)
 }
 
@@ -426,6 +437,9 @@ async fn main() -> Result<(), macroquad::Error> {
     let mut started_lions = false;
     let mut lions_start_time = None;
 
+    let mut last_fps = get_fps() as f32;
+    let smoothing_factor = 2.0 / (120.0 + 1.0);
+
     loop {
         clear_background(Color::new(116.0 / 255.0, 172.0 / 255.0, 223.0 / 255.0, 1.0));
 
@@ -434,6 +448,9 @@ async fn main() -> Result<(), macroquad::Error> {
         for ball in balls.iter_mut() {
             ball.size = board.tile_width() * 1.0;
         }
+
+        last_fps = (smoothing_factor * (get_fps() as f32 - last_fps)) + last_fps;
+        draw_fps(&board, last_fps);
 
         draw_scores(&board);
 
@@ -494,12 +511,10 @@ async fn main() -> Result<(), macroquad::Error> {
                 draw_game_title(&board);
             }
             GameState::Playing => {
-                let (mut wall_bounce, mut black_tile_bounce, mut gold_tile_bounce) = (false, false, false);
+                let (mut wall_bounce, mut black_tile_bounce, mut gold_tile_bounce) =
+                    (false, false, false);
                 for ball in balls.iter_mut() {
-                    let (hit_wall, hit_tile) = move_ball(
-                        &mut board,
-                        ball
-                    );
+                    let (hit_wall, hit_tile) = move_ball(&mut board, ball);
                     wall_bounce = wall_bounce || hit_wall;
                     black_tile_bounce = black_tile_bounce || hit_tile && !ball.bounce_on;
                     gold_tile_bounce = gold_tile_bounce || hit_tile && ball.bounce_on;
